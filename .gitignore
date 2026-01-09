@@ -1,6 +1,7 @@
 .playwright-mcp
 .env
 .venv
+venv
 node_modules
 .pytest_cache
 .ruff_cache
