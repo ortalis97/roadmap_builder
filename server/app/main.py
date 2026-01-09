@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
+from app.database import close_db, init_db
 
 # Configure structured logging
 structlog.configure(
@@ -33,7 +34,14 @@ async def lifespan(app: FastAPI):
         environment=settings.environment,
         port=settings.port,
     )
+
+    # Initialize database
+    await init_db()
+
     yield
+
+    # Cleanup
+    await close_db()
     logger.info("Application shutdown complete")
 
 

@@ -53,20 +53,38 @@ roadmap_builder/
 └── CLAUDE.md                   # This file
 ```
 
+## Virtual Environment Setup
+
+**IMPORTANT**: Always use a virtual environment for Python dependencies.
+
+```bash
+# Create venv (one-time setup)
+cd server && python3 -m venv venv
+
+# Activate venv (do this before running any Python commands)
+source server/venv/bin/activate
+
+# Or use venv binaries directly without activating
+./server/venv/bin/python
+./server/venv/bin/pip
+./server/venv/bin/uvicorn
+./server/venv/bin/ruff
+```
+
 ## Commands
 
 ```bash
-# Backend - Install dependencies
-cd server && pip install -r requirements.txt
+# Backend - Install dependencies (using venv)
+cd server && ./venv/bin/pip install -r requirements.txt
 
 # Backend - Run development server
-cd server && uvicorn app.main:app --reload --port 8000
+cd server && ./venv/bin/uvicorn app.main:app --reload --port 8000
 
 # Backend - Run tests
-cd server && pytest
+cd server && ./venv/bin/pytest
 
 # Backend - Lint/format
-cd server && ruff check . && ruff format .
+cd server && ./venv/bin/ruff check app/ && ./venv/bin/ruff format app/
 
 # Frontend - Install dependencies
 cd client && npm install
