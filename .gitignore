@@ -7,3 +7,8 @@ node_modules
 .ruff_cache
 .vscode
 __pycache__
+.DS_Store
+
+# Secrets
+**/firebase-service-account.json
+*.credentials.json

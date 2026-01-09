@@ -24,12 +24,11 @@ See [PRD.md](PRD.md) for the complete product vision, user stories, and detailed
 - User model with firebase_uid index
 - Database lifecycle management (init/close)
 
-### In Progress 🚧
-
 **Phase C: Authentication**
-- Firebase Auth integration (Google OAuth)
-- Token verification middleware
-- Protected API routes
+- Firebase Admin SDK for token verification
+- Auth middleware with `get_current_user` dependency
+- `/api/v1/auth/me` endpoint (returns/creates user)
+- Graceful degradation when Firebase not configured
 
 ### Planned 📋
 
@@ -56,6 +55,10 @@ roadmap_builder/
 │   │   ├── main.py             # FastAPI app entry point
 │   │   ├── config.py           # Pydantic settings
 │   │   ├── database.py         # MongoDB connection
+│   │   ├── middleware/
+│   │   │   └── auth.py         # Firebase token verification
+│   │   ├── routers/
+│   │   │   └── auth.py         # Auth endpoints (/auth/me)
 │   │   └── models/
 │   │       └── user.py         # User document model
 │   ├── venv/                   # Python virtual environment

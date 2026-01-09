@@ -8,6 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.database import close_db, init_db
+from app.middleware.auth import init_firebase
+from app.routers import auth as auth_router
 
 # Configure structured logging
 structlog.configure(
@@ -34,6 +36,9 @@ async def lifespan(app: FastAPI):
         environment=settings.environment,
         port=settings.port,
     )
+
+    # Initialize Firebase
+    init_firebase()
 
     # Initialize database
     await init_db()
@@ -69,6 +74,9 @@ def create_app() -> FastAPI:
     async def health_check():
         """Health check endpoint."""
         return {"status": "healthy", "environment": settings.environment}
+
+    # Include routers
+    app.include_router(auth_router.router, prefix="/api/v1")
 
     return app
 

@@ -11,6 +11,22 @@ A focused tool for self-directed learners to turn messy learning plans into clea
 
 This ensures the documentation stays in sync with the actual codebase.
 
+## Important: Ask for Required Information
+
+**When implementing features that require external configuration or credentials:**
+
+1. **DO NOT** complete implementation with warnings or graceful degradation
+2. **DO** actively ask the user for the required information before marking complete
+3. **DO** wait for the user to provide credentials/config, then validate with it working
+4. **DO** help guide the user through obtaining what's needed (e.g., step-by-step instructions)
+
+Examples:
+- Firebase Auth → Ask for service account JSON before validation
+- MongoDB → Ask for connection string before validation
+- API keys → Ask user to provide them before testing
+
+**Only mark a feature complete when it's fully validated and working.**
+
 ## Tech Stack
 
 - **Backend**: Python 3.11+, FastAPI, Beanie ODM, Motor (async MongoDB)
@@ -45,9 +61,13 @@ roadmap_builder/
 │   │   ├── models/             # Pydantic + Beanie models
 │   │   │   ├── __init__.py
 │   │   │   └── user.py         # User document model
-│   │   ├── routers/            # API route handlers (to be added)
+│   │   ├── routers/            # API route handlers
+│   │   │   ├── __init__.py
+│   │   │   └── auth.py         # Auth endpoints (/auth/me)
 │   │   ├── services/           # Business logic (to be added)
-│   │   ├── middleware/         # Auth verification (to be added)
+│   │   ├── middleware/         # Auth verification
+│   │   │   ├── __init__.py
+│   │   │   └── auth.py         # Firebase token verification
 │   │   └── utils/
 │   ├── venv/                   # Python virtual environment
 │   ├── tests/
