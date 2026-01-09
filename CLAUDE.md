@@ -2,6 +2,15 @@
 
 A focused tool for self-directed learners to turn messy learning plans into clear, trackable roadmaps with an AI assistant embedded directly into the learning flow.
 
+## Important: Keep Documentation Updated
+
+**After completing each implementation phase, update these files:**
+
+1. **`README.md`** — Update the "Current Status" section to reflect what's implemented
+2. **`CLAUDE.md`** — Update project structure if new directories/files are added
+
+This ensures the documentation stays in sync with the actual codebase.
+
 ## Tech Stack
 
 - **Backend**: Python 3.11+, FastAPI, Beanie ODM, Motor (async MongoDB)
@@ -15,7 +24,7 @@ A focused tool for self-directed learners to turn messy learning plans into clea
 
 ```
 roadmap_builder/
-├── client/                     # React frontend
+├── client/                     # React frontend (not yet created)
 │   ├── src/
 │   │   ├── components/         # Reusable UI components
 │   │   ├── pages/              # Route-level components
@@ -32,24 +41,22 @@ roadmap_builder/
 │   │   ├── __init__.py
 │   │   ├── main.py             # FastAPI app entry point
 │   │   ├── config.py           # Settings (Pydantic BaseSettings)
-│   │   ├── routers/            # API route handlers
-│   │   │   ├── auth.py
-│   │   │   ├── roadmaps.py
-│   │   │   └── ai.py
+│   │   ├── database.py         # MongoDB connection (Motor + Beanie)
 │   │   ├── models/             # Pydantic + Beanie models
-│   │   │   ├── user.py
-│   │   │   ├── roadmap.py
-│   │   │   └── chat.py
-│   │   ├── services/           # Business logic
-│   │   │   ├── ai_service.py
-│   │   │   └── roadmap_service.py
-│   │   ├── middleware/         # Auth verification, CORS
+│   │   │   ├── __init__.py
+│   │   │   └── user.py         # User document model
+│   │   ├── routers/            # API route handlers (to be added)
+│   │   ├── services/           # Business logic (to be added)
+│   │   ├── middleware/         # Auth verification (to be added)
 │   │   └── utils/
+│   ├── venv/                   # Python virtual environment
 │   ├── tests/
 │   ├── requirements.txt
-│   └── pyproject.toml
-├── docs/
+│   ├── pyproject.toml
+│   └── .env.example
+├── .agents/plans/              # Implementation plans
 ├── PRD.md                      # Product requirements document
+├── README.md                   # Project overview and status
 └── CLAUDE.md                   # This file
 ```
 
@@ -118,8 +125,9 @@ Use Playwright MCP for:
 
 | Document | When to Read |
 |----------|--------------|
+| `README.md` | Current implementation status, quick start guide |
 | `PRD.md` | Understanding requirements, features, user stories, API spec |
-| `initial_thoughts.txt` | Original product vision and core concepts |
+| `.claude/reference/` | Best practices for FastAPI, React, testing |
 
 ## Code Conventions
 

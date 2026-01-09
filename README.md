@@ -1,58 +1,157 @@
-# Workshop Template
+# Learning Roadmap App
 
-This is a template repository for the Claude Code workshop. It contains the scaffolding and slash commands needed to build a full-stack application with Claude Code.
+A focused tool for self-directed learners to turn messy learning plans into clear, trackable roadmaps with an AI assistant embedded directly into the learning flow.
 
-## What's Included
+## Overview
 
-- **`.claude/commands/`** - Slash commands for planning, execution, validation, and workflow automation
-- **`.claude/reference/`** - Best practices documentation for various technologies
-- **`CLAUDE.md`** - Template for project-specific instructions (fill this in as you build)
+Paste a messy learning plan → Get a structured roadmap → Track your progress → Get contextual AI help — all in one place.
 
-## Getting Started
+See [PRD.md](PRD.md) for the complete product vision, user stories, and detailed requirements.
 
-1. **Fork or clone** this repository
-2. **Define your project** — Have a conversation with your AI coding assistant about what you want to build. Discuss requirements, features, and technical decisions.
-3. **Create your PRD** — Run `/create-prd` to generate a Product Requirements Document based on your conversation
-4. **Build your CLAUDE.md** — Work with the AI assistant to fill in the `CLAUDE.md` template with your project's tech stack, structure, conventions, and commands
-5. **Create reference documents** — Add detailed guides to `.claude/reference/` for specific parts of your codebase (e.g., API patterns, database conventions, deployment strategies). Keep your `CLAUDE.md` concise and point to these references when needed — this prevents overwhelming the LLM with context while still giving detailed guidance when working on specific areas.
-6. **Start building** — Use the development workflow:
-   - `/core_piv_loop:prime` — Load project context
-   - `/core_piv_loop:plan-feature` — Create an implementation plan for a feature
-   - `/core_piv_loop:execute` — Execute the plan step-by-step
+## Current Status
 
-   These commands follow the **PIV Loop** (Prime → Implement → Validate) workflow:
+### Implemented ✅
 
-   ![PIV Loop Diagram](PIVLoopDiagram.png)
+**Phase A: Backend Skeleton**
+- FastAPI application with health endpoint
+- Pydantic BaseSettings configuration
+- Structured logging with structlog
+- CORS middleware configured
 
-## Claude Commands
+**Phase B: Database Integration**
+- MongoDB connection via Motor (async driver)
+- Beanie ODM for document models
+- User model with firebase_uid index
+- Database lifecycle management (init/close)
 
-Slash commands for Claude Code to assist with development workflows.
+### In Progress 🚧
+
+**Phase C: Authentication**
+- Firebase Auth integration (Google OAuth)
+- Token verification middleware
+- Protected API routes
+
+### Planned 📋
+
+- Phase 2: Core Roadmap Features (create, view, AI generation)
+- Phase 3: Progress & Notes (session tracking, notes editor)
+- Phase 4: AI Assistant & Polish (contextual chat, mobile responsive)
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| **Frontend** | React 18, Vite, TypeScript, Tailwind CSS, TanStack Query |
+| **Backend** | Python 3.11+, FastAPI, Pydantic, Uvicorn |
+| **Database** | MongoDB Atlas, Motor, Beanie ODM |
+| **Auth** | Firebase Auth (Google OAuth) |
+| **AI** | Gemini API |
+
+## Project Structure
+
+```
+roadmap_builder/
+├── server/                     # Python FastAPI backend
+│   ├── app/
+│   │   ├── main.py             # FastAPI app entry point
+│   │   ├── config.py           # Pydantic settings
+│   │   ├── database.py         # MongoDB connection
+│   │   └── models/
+│   │       └── user.py         # User document model
+│   ├── venv/                   # Python virtual environment
+│   ├── requirements.txt
+│   └── .env                    # Environment variables (not committed)
+├── client/                     # React frontend (not yet created)
+├── PRD.md                      # Product requirements document
+├── CLAUDE.md                   # Development instructions
+└── README.md                   # This file
+```
+
+## Quick Start
+
+### Prerequisites
+
+- Python 3.11+
+- Docker (for local MongoDB) or MongoDB Atlas account
+- Node.js 18+ (for frontend, when implemented)
+
+### Backend Setup
+
+```bash
+# Navigate to server directory
+cd server
+
+# Create and activate virtual environment
+python3 -m venv venv
+source venv/bin/activate  # or ./venv/bin/activate
+
+# Install dependencies
+./venv/bin/pip install -r requirements.txt
+
+# Copy environment template and configure
+cp .env.example .env
+# Edit .env with your MongoDB URI
+
+# Start development server
+./venv/bin/uvicorn app.main:app --reload --port 8000
+```
+
+### Local MongoDB (Docker)
+
+```bash
+# Start MongoDB container
+docker run -d --name mongodb-test -p 27017:27017 mongo:7
+
+# Use this connection string in .env
+MONGODB_URI=mongodb://localhost:27017/roadmap_builder
+```
+
+### Verify Installation
+
+```bash
+# Health check
+curl http://localhost:8000/health
+# Expected: {"status":"healthy","environment":"development"}
+
+# API docs
+open http://localhost:8000/docs
+```
+
+## Development
+
+See [CLAUDE.md](CLAUDE.md) for detailed development instructions, conventions, and commands.
+
+### Key Commands
+
+```bash
+# Backend
+cd server && ./venv/bin/uvicorn app.main:app --reload    # Run dev server
+cd server && ./venv/bin/pytest                            # Run tests
+cd server && ./venv/bin/ruff check app/                   # Lint code
+
+# Frontend (when implemented)
+cd client && npm run dev                                  # Run dev server
+cd client && npm test                                     # Run tests
+```
+
+---
+
+## Claude Code Commands
+
+This project uses Claude Code slash commands for development workflow:
 
 ### Planning & Execution
 | Command | Description |
 |---------|-------------|
 | `/core_piv_loop:prime` | Load project context and codebase understanding |
-| `/core_piv_loop:plan-feature` | Create comprehensive implementation plan with codebase analysis |
+| `/core_piv_loop:plan-feature` | Create comprehensive implementation plan |
 | `/core_piv_loop:execute` | Execute an implementation plan step-by-step |
 
 ### Validation
 | Command | Description |
 |---------|-------------|
-| `/validation:validate` | Run full validation: tests, linting, coverage, build (customize to your project) |
+| `/validation:validate` | Run full validation: tests, linting, coverage |
 | `/validation:code-review` | Technical code review on changed files |
-| `/validation:code-review-fix` | Fix issues found in code review |
-| `/validation:execution-report` | Generate report after implementing a feature |
-| `/validation:system-review` | Analyze implementation vs plan for process improvements |
+| `/commit` | Create atomic commit with appropriate tag |
 
-### Bug Fixing
-| Command | Description |
-|---------|-------------|
-| `/github_bug_fix:rca` | Create root cause analysis document for a GitHub issue |
-| `/github_bug_fix:implement-fix` | Implement fix based on RCA document |
-
-### Misc
-| Command | Description |
-|---------|-------------|
-| `/commit` | Create atomic commit with appropriate tag (feat, fix, docs, etc.) |
-| `/init-project` | Install dependencies and start development servers (customize this to your project) |
-| `/create-prd` | Generate Product Requirements Document from conversation |
+See `.claude/commands/` for all available commands.
