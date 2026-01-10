@@ -9,6 +9,9 @@ node_modules
 __pycache__
 .DS_Store
 
+# Client build
+client/dist
+
 # Secrets
 **/firebase-service-account.json
 *.credentials.json

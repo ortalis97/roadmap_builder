@@ -40,18 +40,21 @@ Examples:
 
 ```
 roadmap_builder/
-├── client/                     # React frontend (not yet created)
+├── client/                     # React frontend
 │   ├── src/
 │   │   ├── components/         # Reusable UI components
+│   │   │   └── layout/         # Layout, ProtectedRoute
 │   │   ├── pages/              # Route-level components
-│   │   ├── hooks/              # Custom React hooks
-│   │   ├── services/           # API client functions
-│   │   ├── context/            # React context providers
+│   │   ├── hooks/              # Custom React hooks (useRoadmaps)
+│   │   ├── services/           # API client, Firebase
+│   │   ├── context/            # React context (AuthContext)
 │   │   ├── types/              # TypeScript types
-│   │   └── utils/              # Helper functions
+│   │   ├── App.tsx             # Main app with routing
+│   │   └── main.tsx            # Entry point
 │   ├── public/
 │   ├── index.html
-│   └── package.json
+│   ├── package.json
+│   └── .env.example
 ├── server/                     # Python FastAPI backend
 │   ├── app/
 │   │   ├── __init__.py
@@ -60,10 +63,15 @@ roadmap_builder/
 │   │   ├── database.py         # MongoDB connection (Motor + Beanie)
 │   │   ├── models/             # Pydantic + Beanie models
 │   │   │   ├── __init__.py
-│   │   │   └── user.py         # User document model
+│   │   │   ├── user.py         # User document model
+│   │   │   ├── draft.py        # Draft document model
+│   │   │   ├── roadmap.py      # Roadmap document model
+│   │   │   └── session.py      # Session document model
 │   │   ├── routers/            # API route handlers
 │   │   │   ├── __init__.py
-│   │   │   └── auth.py         # Auth endpoints (/auth/me)
+│   │   │   ├── auth.py         # Auth endpoints (/auth/me)
+│   │   │   ├── drafts.py       # Draft endpoints
+│   │   │   └── roadmaps.py     # Roadmap endpoints
 │   │   ├── services/           # Business logic (to be added)
 │   │   ├── middleware/         # Auth verification
 │   │   │   ├── __init__.py
@@ -113,20 +121,20 @@ cd server && ./venv/bin/pytest
 # Backend - Lint/format
 cd server && ./venv/bin/ruff check app/ && ./venv/bin/ruff format app/
 
-# Frontend - Install dependencies
-cd client && npm install
+# Frontend - Install dependencies (using bun)
+cd client && ~/.bun/bin/bun install
 
 # Frontend - Run development server
-cd client && npm run dev
+cd client && ~/.bun/bin/bun run dev
 
 # Frontend - Run tests
-cd client && npm test
+cd client && ~/.bun/bin/bun test
 
 # Frontend - Build for production
-cd client && npm run build
+cd client && ~/.bun/bin/bun run build
 
 # Frontend - Lint
-cd client && npm run lint
+cd client && ~/.bun/bin/bun run lint
 ```
 
 ## MCP Servers

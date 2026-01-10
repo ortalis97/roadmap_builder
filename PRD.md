@@ -728,27 +728,52 @@ class User(Document):
         name = "users"
 ```
 
-**Roadmap**
+**Draft** (stores original pasted text, used once for parsing)
 ```python
-class Session(BaseModel):
-    id: str = Field(default_factory=lambda: str(ObjectId()))
+class Draft(Document):
+    user_id: PydanticObjectId
+    raw_text: str                    # Original pasted content
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    class Settings:
+        name = "drafts"
+```
+
+**Roadmap** (production document, references Draft)
+```python
+class SessionSummary(BaseModel):
+    """Embedded in Roadmap for quick session listing."""
+    id: PydanticObjectId
     title: str
-    content: str  # Rich text / markdown
-    status: Literal["not_started", "in_progress", "done", "skipped"] = "not_started"
-    notes: str = ""
     order: int
 
 class Roadmap(Document):
     user_id: PydanticObjectId
+    draft_id: PydanticObjectId       # Reference to original Draft
     title: str
-    summary: str
-    sessions: List[Session] = []
+    summary: Optional[str] = None    # AI-generated later
+    sessions: List[SessionSummary] = []  # Lightweight refs (id, title, order)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
-    last_accessed_at: datetime = Field(default_factory=datetime.utcnow)
 
     class Settings:
         name = "roadmaps"
+```
+
+**Session** (separate collection, full content)
+```python
+class Session(Document):
+    roadmap_id: PydanticObjectId     # Reference to parent Roadmap
+    order: int                        # Session number (1, 2, 3...)
+    title: str
+    content: str                      # Full session content (markdown)
+    status: Literal["not_started", "in_progress", "done", "skipped"] = "not_started"
+    notes: str = ""                   # User's notes
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+    class Settings:
+        name = "sessions"
 ```
 
 **ChatHistory**
@@ -760,11 +785,28 @@ class ChatMessage(BaseModel):
 
 class ChatHistory(Document):
     roadmap_id: PydanticObjectId
-    session_id: str
+    session_id: PydanticObjectId     # Reference to Session document
     messages: List[ChatMessage] = []
 
     class Settings:
         name = "chat_histories"
+```
+
+**Data Model Relationships**
+```
+Draft (raw_text)
+  ↑
+  │ draft_id
+  │
+Roadmap (title, summary, sessions[])
+  ↑
+  │ roadmap_id
+  │
+Session (content, notes, status)
+  ↑
+  │ session_id
+  │
+ChatHistory (messages[])
 ```
 
 ### Related Documents

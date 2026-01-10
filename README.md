@@ -30,11 +30,21 @@ See [PRD.md](PRD.md) for the complete product vision, user stories, and detailed
 - `/api/v1/auth/me` endpoint (returns/creates user)
 - Graceful degradation when Firebase not configured
 
+**Phase 2: Basic UI & Roadmap Storage**
+- Draft, Roadmap, Session Beanie document models
+- `/api/v1/drafts` endpoint (create, get)
+- `/api/v1/roadmaps` endpoints (list, create, get, delete)
+- React + Vite + TypeScript + Tailwind frontend
+- Firebase client-side auth (Google OAuth)
+- Dashboard showing user's roadmaps
+- Create roadmap form (paste raw text)
+- Roadmap detail view with delete
+
 ### Planned 📋
 
-- Phase 2: Core Roadmap Features (create, view, AI generation)
-- Phase 3: Progress & Notes (session tracking, notes editor)
-- Phase 4: AI Assistant & Polish (contextual chat, mobile responsive)
+- Phase 3: AI Session Parsing (parse draft into structured sessions)
+- Phase 4: Progress & Notes (session tracking, notes editor)
+- Phase 5: AI Assistant & Polish (contextual chat, mobile responsive)
 
 ## Tech Stack
 
@@ -58,13 +68,27 @@ roadmap_builder/
 │   │   ├── middleware/
 │   │   │   └── auth.py         # Firebase token verification
 │   │   ├── routers/
-│   │   │   └── auth.py         # Auth endpoints (/auth/me)
+│   │   │   ├── auth.py         # Auth endpoints (/auth/me)
+│   │   │   ├── drafts.py       # Draft endpoints
+│   │   │   └── roadmaps.py     # Roadmap endpoints
 │   │   └── models/
-│   │       └── user.py         # User document model
+│   │       ├── user.py         # User document model
+│   │       ├── draft.py        # Draft document model
+│   │       ├── roadmap.py      # Roadmap document model
+│   │       └── session.py      # Session document model
 │   ├── venv/                   # Python virtual environment
 │   ├── requirements.txt
 │   └── .env                    # Environment variables (not committed)
-├── client/                     # React frontend (not yet created)
+├── client/                     # React frontend
+│   ├── src/
+│   │   ├── components/         # Reusable UI components
+│   │   ├── context/            # React context (AuthContext)
+│   │   ├── hooks/              # Custom hooks (useRoadmaps)
+│   │   ├── pages/              # Route pages
+│   │   ├── services/           # API client, Firebase
+│   │   └── types/              # TypeScript types
+│   ├── package.json
+│   └── .env                    # Firebase config (not committed)
 ├── PRD.md                      # Product requirements document
 ├── CLAUDE.md                   # Development instructions
 └── README.md                   # This file
@@ -120,6 +144,29 @@ curl http://localhost:8000/health
 open http://localhost:8000/docs
 ```
 
+### Frontend Setup
+
+```bash
+# Navigate to client directory
+cd client
+
+# Install dependencies (using bun)
+~/.bun/bin/bun install
+
+# Copy environment template and configure with Firebase credentials
+cp .env.example .env
+# Edit .env with your Firebase project config
+
+# Start development server
+~/.bun/bin/bun run dev
+```
+
+**Firebase Configuration Required:**
+1. Create a Firebase project at https://console.firebase.google.com
+2. Enable Google sign-in in Authentication
+3. Add web app and copy config values to `client/.env`
+4. Add `http://localhost:5173` to authorized domains
+
 ## Development
 
 See [CLAUDE.md](CLAUDE.md) for detailed development instructions, conventions, and commands.
@@ -128,13 +175,14 @@ See [CLAUDE.md](CLAUDE.md) for detailed development instructions, conventions, a
 
 ```bash
 # Backend
-cd server && ./venv/bin/uvicorn app.main:app --reload    # Run dev server
-cd server && ./venv/bin/pytest                            # Run tests
-cd server && ./venv/bin/ruff check app/                   # Lint code
+cd server && ./venv/bin/uvicorn app.main:app --reload         # Run dev server
+cd server && ./venv/bin/pytest                                 # Run tests
+cd server && ./venv/bin/ruff check app/                        # Lint code
 
-# Frontend (when implemented)
-cd client && npm run dev                                  # Run dev server
-cd client && npm test                                     # Run tests
+# Frontend (using bun)
+cd client && ~/.bun/bin/bun run dev                            # Run dev server
+cd client && ~/.bun/bin/bun run build                          # Build for production
+cd client && ~/.bun/bin/bun run lint                           # Lint code
 ```
 
 ---
