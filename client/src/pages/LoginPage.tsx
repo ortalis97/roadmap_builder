@@ -19,8 +19,12 @@ export function LoginPage() {
     setIsSigningIn(true);
     try {
       await signInWithGoogle();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to sign in');
+    } catch (err: unknown) {
+      const firebaseError = err as { code?: string; message?: string };
+      const errorMessage = firebaseError.code
+        ? `${firebaseError.code}: ${firebaseError.message}`
+        : (err instanceof Error ? err.message : 'Failed to sign in');
+      setError(errorMessage);
     } finally {
       setIsSigningIn(false);
     }

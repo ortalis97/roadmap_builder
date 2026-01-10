@@ -36,7 +36,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signInWithGoogle = async () => {
-    await signInWithPopup(auth, googleProvider);
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (error: unknown) {
+      const firebaseError = error as { code?: string; message?: string; customData?: unknown };
+      console.error('Firebase Auth Error:', {
+        code: firebaseError.code,
+        message: firebaseError.message,
+        customData: firebaseError.customData,
+      });
+      throw error;
+    }
   };
 
   const signOut = async () => {

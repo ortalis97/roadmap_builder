@@ -163,9 +163,10 @@ cp .env.example .env
 
 **Firebase Configuration Required:**
 1. Create a Firebase project at https://console.firebase.google.com
-2. Enable Google sign-in in Authentication
-3. Add web app and copy config values to `client/.env`
-4. Add `http://localhost:5173` to authorized domains
+2. Enable Google sign-in in Authentication > Sign-in method
+3. Configure OAuth consent screen in Google Cloud Console
+4. Add web app and copy config values to `client/.env`
+5. Ensure `localhost` is in Authentication > Settings > Authorized domains
 
 ## Development
 
