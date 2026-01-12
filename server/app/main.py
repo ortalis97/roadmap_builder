@@ -12,6 +12,7 @@ from app.middleware.auth import init_firebase
 from app.routers import auth as auth_router
 from app.routers import drafts as drafts_router
 from app.routers import roadmaps as roadmaps_router
+from app.services.ai_service import init_gemini
 
 # Configure structured logging
 structlog.configure(
@@ -41,6 +42,9 @@ async def lifespan(app: FastAPI):
 
     # Initialize Firebase
     init_firebase()
+
+    # Initialize Gemini AI
+    init_gemini()
 
     # Initialize database
     await init_db()

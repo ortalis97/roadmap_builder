@@ -2,14 +2,19 @@
 
 from datetime import datetime
 
+import structlog
 from beanie import PydanticObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from app.middleware.auth import get_current_user
 from app.models.draft import Draft
-from app.models.roadmap import Roadmap
+from app.models.roadmap import Roadmap, SessionSummary
+from app.models.session import Session
 from app.models.user import User
+from app.services.ai_service import generate_sessions_from_draft, is_gemini_configured
+
+logger = structlog.get_logger()
 
 router = APIRouter(prefix="/roadmaps", tags=["roadmaps"])
 
@@ -85,6 +90,7 @@ async def create_roadmap(
     """Create a new roadmap from a draft.
 
     The draft must exist and belong to the current user.
+    Uses AI to generate structured sessions from the draft text.
     """
     # Validate draft_id format
     try:
@@ -103,20 +109,75 @@ async def create_roadmap(
             detail="Draft not found",
         )
 
+    # Generate sessions using AI
+    if not is_gemini_configured():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI service not configured",
+        )
+
+    try:
+        logger.info(
+            "Generating sessions for roadmap",
+            user_id=str(current_user.id),
+            title=roadmap_data.title,
+        )
+        generated = await generate_sessions_from_draft(
+            raw_text=draft.raw_text,
+            title=roadmap_data.title,
+        )
+    except Exception as e:
+        logger.error("AI generation failed", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate sessions. Please try again.",
+        )
+
+    # Create roadmap first to get its ID
     roadmap = Roadmap(
         user_id=current_user.id,
         draft_id=draft_object_id,
         title=roadmap_data.title,
-        sessions=[],
+        summary=generated.summary,
+        sessions=[],  # Will be populated after creating Session documents
     )
     await roadmap.insert()
+
+    # Create Session documents and build SessionSummary list
+    session_summaries = []
+    for order, gen_session in enumerate(generated.sessions, start=1):
+        session = Session(
+            roadmap_id=roadmap.id,
+            order=order,
+            title=gen_session.title,
+            content=gen_session.content,
+        )
+        await session.insert()
+        session_summaries.append(SessionSummary(id=session.id, title=session.title, order=order))
+
+    # Update roadmap with session summaries
+    roadmap.sessions = session_summaries
+    await roadmap.save()
+
+    logger.info(
+        "Roadmap created successfully",
+        roadmap_id=str(roadmap.id),
+        session_count=len(session_summaries),
+    )
 
     return RoadmapResponse(
         id=str(roadmap.id),
         draft_id=str(roadmap.draft_id),
         title=roadmap.title,
         summary=roadmap.summary,
-        sessions=[],
+        sessions=[
+            SessionSummaryResponse(
+                id=str(s.id),
+                title=s.title,
+                order=s.order,
+            )
+            for s in roadmap.sessions
+        ],
         created_at=roadmap.created_at,
         updated_at=roadmap.updated_at,
     )

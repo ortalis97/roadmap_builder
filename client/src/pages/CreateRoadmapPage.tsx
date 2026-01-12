@@ -96,8 +96,8 @@ export function CreateRoadmapPage() {
               required
             />
             <p className="mt-1 text-sm text-gray-500">
-              This will be saved as your draft. AI parsing into sessions coming
-              soon.
+              Your learning plan will be analyzed by AI to create structured
+              sessions.
             </p>
           </div>
 
@@ -107,7 +107,7 @@ export function CreateRoadmapPage() {
               disabled={isPending || !title.trim() || !rawText.trim()}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isPending ? 'Creating...' : 'Create Roadmap'}
+              {isPending ? 'Generating sessions...' : 'Create Roadmap'}
             </button>
             <Link
               to="/"

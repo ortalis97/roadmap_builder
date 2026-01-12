@@ -40,9 +40,15 @@ See [PRD.md](PRD.md) for the complete product vision, user stories, and detailed
 - Create roadmap form (paste raw text)
 - Roadmap detail view with delete
 
+**Phase 3: AI Session Parsing**
+- Gemini API integration (google-genai SDK)
+- AI service layer for session generation
+- Structured prompt engineering for JSON output
+- Sessions automatically generated when creating roadmap
+- Session documents stored in MongoDB
+
 ### Planned 📋
 
-- Phase 3: AI Session Parsing (parse draft into structured sessions)
 - Phase 4: Progress & Notes (session tracking, notes editor)
 - Phase 5: AI Assistant & Polish (contextual chat, mobile responsive)
 

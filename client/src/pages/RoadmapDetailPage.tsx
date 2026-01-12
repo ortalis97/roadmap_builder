@@ -112,9 +112,9 @@ export function RoadmapDetailPage() {
             </div>
           ) : (
             <div className="text-center py-8 text-gray-500">
-              <p>No sessions yet.</p>
+              <p>No sessions were generated.</p>
               <p className="text-sm mt-1">
-                AI parsing of your draft into sessions is coming soon.
+                Try creating a new roadmap with more detailed content.
               </p>
             </div>
           )}

@@ -33,7 +33,7 @@ Examples:
 - **Frontend**: React 18, Vite, TypeScript, Tailwind CSS, TanStack Query
 - **Database**: MongoDB Atlas
 - **Auth**: Firebase Auth (Google OAuth)
-- **AI**: Gemini API (google-generativeai)
+- **AI**: Gemini API (google-genai SDK)
 - **Testing**: pytest (backend), Vitest (frontend), Playwright (E2E)
 
 ## Project Structure
@@ -72,7 +72,9 @@ roadmap_builder/
 │   │   │   ├── auth.py         # Auth endpoints (/auth/me)
 │   │   │   ├── drafts.py       # Draft endpoints
 │   │   │   └── roadmaps.py     # Roadmap endpoints
-│   │   ├── services/           # Business logic (to be added)
+│   │   ├── services/           # Business logic
+│   │   │   ├── __init__.py
+│   │   │   └── ai_service.py   # Gemini AI integration
 │   │   ├── middleware/         # Auth verification
 │   │   │   ├── __init__.py
 │   │   │   └── auth.py         # Firebase token verification
@@ -250,3 +252,24 @@ client/src/
 - Mock Gemini API calls in unit tests (don't hit real API)
 - E2E tests run against local dev servers
 - Use Playwright MCP for E2E test development and debugging
+
+## Implementation Learnings
+
+**Document learnings here when approaches don't work as expected during development.**
+
+### Google Gemini SDK (January 2025)
+
+- **Package name changed**: The `google-generativeai` package is deprecated. Use `google-genai` instead.
+  - Old: `pip install google-generativeai` → `import google.generativeai as genai`
+  - New: `pip install google-genai` → `from google import genai`
+- **Client initialization**: Use `genai.Client(api_key=...)` instead of `genai.configure(api_key=...)`
+- **Model usage**: Use `client.models.generate_content(model="gemini-2.0-flash", ...)` pattern
+- **Async handling**: The SDK's `generate_content` is synchronous; wrap in `asyncio.run_in_executor()` for async FastAPI endpoints
+- **JSON output**: Request JSON-only output in the prompt and clean up markdown code blocks from response
+
+### Self-Improvement Instructions
+
+When learning approaches that don't work well during development:
+1. Document the issue and working solution in this section
+2. Include package versions and dates when relevant
+3. Add code snippets showing the correct pattern
