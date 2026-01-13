@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useRoadmap, useDeleteRoadmap } from '../hooks/useRoadmaps';
+import { useSessions, useRoadmapProgress, useUpdateSessionStatus } from '../hooks/useSessions';
+import { SessionStatusIcon, getNextStatus } from '../components/SessionStatusIcon';
+import { ProgressBar } from '../components/ProgressBar';
 
 export function RoadmapDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -8,6 +11,9 @@ export function RoadmapDetailPage() {
   const { data: roadmap, isLoading, error } = useRoadmap(id!);
   const { mutate: deleteRoadmap, isPending: isDeleting } = useDeleteRoadmap();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const { data: sessionsWithStatus } = useSessions(id!);
+  const { data: progress } = useRoadmapProgress(id!);
+  const { mutate: updateStatus } = useUpdateSessionStatus(id!);
 
   const handleDelete = () => {
     deleteRoadmap(id!, {
@@ -92,20 +98,51 @@ export function RoadmapDetailPage() {
           )}
         </div>
 
+        {/* Progress Section */}
+        {progress && progress.total > 0 && (
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-700">Progress</span>
+              <span className="text-sm text-gray-500">
+                {progress.done} of {progress.total} completed
+              </span>
+            </div>
+            <ProgressBar percentage={progress.percentage} />
+          </div>
+        )}
+
+        {/* Sessions Section */}
         <div className="p-6">
-          {roadmap.sessions.length > 0 ? (
+          {sessionsWithStatus && sessionsWithStatus.length > 0 ? (
             <div className="space-y-4">
               <h2 className="text-lg font-medium text-gray-900">Sessions</h2>
               <div className="space-y-2">
-                {roadmap.sessions.map((session) => (
+                {sessionsWithStatus.map((session) => (
                   <div
                     key={session.id}
-                    className="p-4 border border-gray-200 rounded-md"
+                    className="flex items-center gap-3 p-4 border border-gray-200 rounded-md hover:border-gray-300 transition-colors"
                   >
-                    <span className="text-sm text-gray-500 mr-2">
-                      #{session.order}
-                    </span>
-                    <span className="font-medium">{session.title}</span>
+                    <SessionStatusIcon
+                      status={session.status}
+                      size="sm"
+                      onClick={() => {
+                        updateStatus({
+                          sessionId: session.id,
+                          status: getNextStatus(session.status),
+                        });
+                      }}
+                    />
+                    <Link
+                      to={`/roadmaps/${id}/sessions/${session.id}`}
+                      className="flex-1 flex items-center"
+                    >
+                      <span className="text-sm text-gray-500 mr-2">
+                        #{session.order}
+                      </span>
+                      <span className="font-medium hover:text-blue-600">
+                        {session.title}
+                      </span>
+                    </Link>
                   </div>
                 ))}
               </div>
@@ -113,9 +150,6 @@ export function RoadmapDetailPage() {
           ) : (
             <div className="text-center py-8 text-gray-500">
               <p>No sessions were generated.</p>
-              <p className="text-sm mt-1">
-                Try creating a new roadmap with more detailed content.
-              </p>
             </div>
           )}
         </div>

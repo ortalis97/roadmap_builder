@@ -7,6 +7,7 @@ import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { CreateRoadmapPage } from './pages/CreateRoadmapPage';
 import { RoadmapDetailPage } from './pages/RoadmapDetailPage';
+import { SessionDetailPage } from './pages/SessionDetailPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -35,6 +36,7 @@ function App() {
               <Route path="/" element={<DashboardPage />} />
               <Route path="/create" element={<CreateRoadmapPage />} />
               <Route path="/roadmaps/:id" element={<RoadmapDetailPage />} />
+              <Route path="/roadmaps/:roadmapId/sessions/:sessionId" element={<SessionDetailPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

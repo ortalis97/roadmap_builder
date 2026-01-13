@@ -1,5 +1,34 @@
 import { Link } from 'react-router-dom';
 import { useRoadmaps } from '../hooks/useRoadmaps';
+import { useRoadmapProgress } from '../hooks/useSessions';
+import { ProgressBar } from '../components/ProgressBar';
+import type { RoadmapListItem } from '../types';
+
+function RoadmapCard({ roadmap }: { roadmap: RoadmapListItem }) {
+  const { data: progress } = useRoadmapProgress(roadmap.id);
+
+  return (
+    <Link
+      to={`/roadmaps/${roadmap.id}`}
+      className="block p-6 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+    >
+      <h3 className="text-lg font-medium text-gray-900">
+        {roadmap.title}
+      </h3>
+      <div className="mt-2 flex items-center gap-4 text-sm text-gray-500">
+        <span>{roadmap.session_count} sessions</span>
+        <span>
+          {new Date(roadmap.created_at).toLocaleDateString()}
+        </span>
+      </div>
+      {progress && progress.total > 0 && (
+        <div className="mt-3">
+          <ProgressBar percentage={progress.percentage} size="sm" />
+        </div>
+      )}
+    </Link>
+  );
+}
 
 export function DashboardPage() {
   const { data: roadmaps, isLoading, error } = useRoadmaps();
@@ -48,21 +77,7 @@ export function DashboardPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {roadmaps?.map((roadmap) => (
-            <Link
-              key={roadmap.id}
-              to={`/roadmaps/${roadmap.id}`}
-              className="block p-6 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
-            >
-              <h3 className="text-lg font-medium text-gray-900">
-                {roadmap.title}
-              </h3>
-              <div className="mt-2 flex items-center gap-4 text-sm text-gray-500">
-                <span>{roadmap.session_count} sessions</span>
-                <span>
-                  {new Date(roadmap.created_at).toLocaleDateString()}
-                </span>
-              </div>
-            </Link>
+            <RoadmapCard key={roadmap.id} roadmap={roadmap} />
           ))}
         </div>
       )}

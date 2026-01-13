@@ -11,6 +11,41 @@ export interface SessionSummary {
   order: number;
 }
 
+export type SessionStatus = 'not_started' | 'in_progress' | 'done' | 'skipped';
+
+export interface SessionSummaryWithStatus {
+  id: string;
+  title: string;
+  order: number;
+  status: SessionStatus;
+}
+
+export interface Session {
+  id: string;
+  roadmap_id: string;
+  order: number;
+  title: string;
+  content: string;
+  status: SessionStatus;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SessionUpdate {
+  status?: SessionStatus;
+  notes?: string;
+}
+
+export interface RoadmapProgress {
+  total: number;
+  done: number;
+  in_progress: number;
+  skipped: number;
+  not_started: number;
+  percentage: number;
+}
+
 export interface RoadmapListItem {
   id: string;
   title: string;
