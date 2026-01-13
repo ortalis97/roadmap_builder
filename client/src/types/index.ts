@@ -70,3 +70,30 @@ export interface User {
   name: string;
   picture: string | null;
 }
+
+// Chat types
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+}
+
+export interface ChatHistory {
+  conversation_id: string;
+  messages: ChatMessage[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChatRequest {
+  session_id: string;
+  roadmap_id: string;
+  message: string;
+  conversation_id?: string;
+}
+
+export interface ChatResponse {
+  conversation_id: string;
+  user_message: ChatMessage;
+  assistant_message: ChatMessage;
+}

@@ -2,6 +2,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useSession, useUpdateSession, useSessions } from '../hooks/useSessions';
 import { SessionStatusIcon, getNextStatus } from '../components/SessionStatusIcon';
 import { NotesEditor } from '../components/NotesEditor';
+import { ChatInterface } from '../components/ChatInterface';
 import type { SessionStatus } from '../types';
 import { useCallback, useMemo } from 'react';
 
@@ -112,6 +113,10 @@ export function SessionDetailPage() {
           <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap">
             {session.content}
           </div>
+        </div>
+
+        <div className="p-6 border-b border-gray-200">
+          <ChatInterface roadmapId={roadmapId!} sessionId={sessionId!} />
         </div>
 
         <div className="p-6">

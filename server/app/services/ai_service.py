@@ -57,6 +57,32 @@ Rules:
 """
 
 
+CHAT_SYSTEM_PROMPT = """You are a knowledgeable and supportive learning assistant \
+embedded in a learning roadmap application.
+
+Your role is to help the learner understand the current session's content, \
+answer questions, provide examples, clarify concepts, and guide them through \
+their learning journey.
+
+Context provided to you:
+- The roadmap title and summary (overall learning goal)
+- All session titles (to understand the learning path)
+- The current session's title and full content
+- The learner's personal notes for this session
+- Previous conversation history (if any)
+
+Guidelines:
+- Be encouraging and supportive
+- Provide clear, accurate explanations
+- Use examples when helpful
+- Reference specific parts of the session content when relevant
+- Acknowledge and build upon the learner's notes if they exist
+- Keep responses focused and concise unless detail is requested
+- If asked about topics outside the session scope, relate back to the learning journey
+- Format responses in markdown for better readability
+"""
+
+
 def init_gemini() -> None:
     """Initialize Gemini client.
 
@@ -203,3 +229,124 @@ Remember to output ONLY valid JSON matching the required schema."""
     raise ValueError(
         f"Failed to generate valid sessions after {max_retries + 1} attempts: {last_error}"
     )
+
+
+def _generate_chat_response_sync(
+    system_prompt: str,
+    conversation_history: list[dict],
+    user_message: str,
+) -> str:
+    """Synchronous Gemini chat call (runs in thread pool).
+
+    Args:
+        system_prompt: System instruction with context
+        conversation_history: List of previous messages with role and content
+        user_message: Current user message
+
+    Returns:
+        AI-generated response text
+    """
+    if _client is None:
+        raise RuntimeError("Gemini client not initialized")
+
+    # Build the contents array with conversation history
+    contents = []
+    for msg in conversation_history:
+        role = "user" if msg["role"] == "user" else "model"
+        contents.append(types.Content(role=role, parts=[types.Part(text=msg["content"])]))
+
+    # Add current user message
+    contents.append(types.Content(role="user", parts=[types.Part(text=user_message)]))
+
+    response = _client.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=contents,
+        config=types.GenerateContentConfig(
+            system_instruction=system_prompt,
+            temperature=0.7,
+            max_output_tokens=4096,
+        ),
+    )
+
+    return response.text
+
+
+async def generate_chat_response(
+    roadmap_title: str,
+    roadmap_summary: str | None,
+    all_session_titles: list[str],
+    current_session_title: str,
+    current_session_content: str,
+    user_notes: str,
+    conversation_history: list[dict],
+    user_message: str,
+) -> str:
+    """Generate an AI response for the chat assistant.
+
+    Args:
+        roadmap_title: Title of the learning roadmap
+        roadmap_summary: Summary of the roadmap (can be None)
+        all_session_titles: List of all session titles in order
+        current_session_title: Title of the current session
+        current_session_content: Full content of the current session
+        user_notes: User's personal notes for this session
+        conversation_history: Previous messages in the conversation
+        user_message: The new message from the user
+
+    Returns:
+        AI-generated response string
+
+    Raises:
+        RuntimeError: If Gemini client is not initialized
+    """
+    if _client is None:
+        raise RuntimeError("Gemini client not initialized")
+
+    # Build context section
+    context_parts = [
+        f"## Roadmap: {roadmap_title}",
+        f"Summary: {roadmap_summary or 'No summary provided'}",
+        "",
+        "## Learning Path (All Sessions):",
+        "\n".join(f"- {title}" for title in all_session_titles),
+        "",
+        f"## Current Session: {current_session_title}",
+        "",
+        "### Session Content:",
+        current_session_content,
+    ]
+
+    if user_notes.strip():
+        context_parts.extend(
+            [
+                "",
+                "### Learner's Notes:",
+                user_notes,
+            ]
+        )
+
+    context = "\n".join(context_parts)
+    full_system_prompt = f"{CHAT_SYSTEM_PROMPT}\n\n---\n\n# Current Context\n\n{context}"
+
+    logger.info(
+        "Generating chat response",
+        roadmap_title=roadmap_title,
+        session_title=current_session_title,
+        history_length=len(conversation_history),
+        message_length=len(user_message),
+    )
+
+    loop = asyncio.get_event_loop()
+    response_text = await loop.run_in_executor(
+        None,
+        partial(
+            _generate_chat_response_sync,
+            full_system_prompt,
+            conversation_history,
+            user_message,
+        ),
+    )
+
+    logger.debug("Chat response generated", response_length=len(response_text))
+
+    return response_text

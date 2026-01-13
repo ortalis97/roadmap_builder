@@ -10,6 +10,7 @@ from app.config import get_settings
 from app.database import close_db, init_db
 from app.middleware.auth import init_firebase
 from app.routers import auth as auth_router
+from app.routers import chat as chat_router
 from app.routers import drafts as drafts_router
 from app.routers import roadmaps as roadmaps_router
 from app.services.ai_service import init_gemini
@@ -83,6 +84,7 @@ def create_app() -> FastAPI:
 
     # Include routers
     app.include_router(auth_router.router, prefix="/api/v1")
+    app.include_router(chat_router.router, prefix="/api/v1")
     app.include_router(drafts_router.router, prefix="/api/v1")
     app.include_router(roadmaps_router.router, prefix="/api/v1")
 

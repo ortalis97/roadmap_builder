@@ -32,6 +32,7 @@ async def init_db() -> None:
     database = _client.get_default_database()
 
     # Import models here to avoid circular imports
+    from app.models.chat_history import ChatHistory
     from app.models.draft import Draft
     from app.models.roadmap import Roadmap
     from app.models.session import Session
@@ -39,7 +40,7 @@ async def init_db() -> None:
 
     await init_beanie(
         database=database,
-        document_models=[Draft, Roadmap, Session, User],
+        document_models=[ChatHistory, Draft, Roadmap, Session, User],
     )
 
     logger.info("Database initialized", database=database.name)

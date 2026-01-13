@@ -1,5 +1,16 @@
 import { auth } from './firebase';
-import type { Draft, Roadmap, RoadmapListItem, Session, SessionSummaryWithStatus, SessionUpdate, RoadmapProgress } from '../types';
+import type {
+  Draft,
+  Roadmap,
+  RoadmapListItem,
+  Session,
+  SessionSummaryWithStatus,
+  SessionUpdate,
+  RoadmapProgress,
+  ChatHistory,
+  ChatRequest,
+  ChatResponse,
+} from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -89,4 +100,31 @@ export async function updateSession(
 
 export async function fetchRoadmapProgress(roadmapId: string): Promise<RoadmapProgress> {
   return request<RoadmapProgress>(`/api/v1/roadmaps/${roadmapId}/progress`);
+}
+
+// Chat API
+export async function sendChatMessage(data: ChatRequest): Promise<ChatResponse> {
+  return request<ChatResponse>('/api/v1/chat/', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function fetchChatHistory(
+  roadmapId: string,
+  sessionId: string
+): Promise<ChatHistory | null> {
+  return request<ChatHistory | null>(
+    `/api/v1/chat/roadmaps/${roadmapId}/sessions/${sessionId}`
+  );
+}
+
+export async function clearChatHistory(
+  roadmapId: string,
+  sessionId: string
+): Promise<void> {
+  return request<void>(
+    `/api/v1/chat/roadmaps/${roadmapId}/sessions/${sessionId}`,
+    { method: 'DELETE' }
+  );
 }
