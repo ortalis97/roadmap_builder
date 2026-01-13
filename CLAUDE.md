@@ -267,6 +267,20 @@ client/src/
 - **Async handling**: The SDK's `generate_content` is synchronous; wrap in `asyncio.run_in_executor()` for async FastAPI endpoints
 - **JSON output**: Request JSON-only output in the prompt and clean up markdown code blocks from response
 
+### npm Restrictions (Company Computer)
+
+- **npm is restricted** on this computer (company policy)
+- Use **bun** for all frontend package management instead of npm
+- For Playwright E2E testing, use bun:
+  ```bash
+  cd client && ~/.bun/bin/bun add -D @playwright/test
+  ~/.bun/bin/bunx playwright install chromium
+  ```
+- Prefer bun equivalents for all npm commands:
+  - `npm install` → `~/.bun/bin/bun install`
+  - `npx` → `~/.bun/bin/bunx`
+  - `npm run` → `~/.bun/bin/bun run`
+
 ### Self-Improvement Instructions
 
 When learning approaches that don't work well during development:
