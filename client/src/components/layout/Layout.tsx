@@ -1,8 +1,16 @@
-import { Outlet, Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Outlet, Link, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { ChatSidebar } from '../ChatSidebar';
 
 export function Layout() {
   const { user, signOut } = useAuth();
+  const params = useParams<{ id?: string; roadmapId?: string; sessionId?: string }>();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Handle both route patterns: /roadmaps/:id and /roadmaps/:roadmapId/sessions/:sessionId
+  const roadmapId = params.roadmapId || params.id;
+  const sessionId = params.sessionId;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -40,6 +48,16 @@ export function Layout() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Outlet />
       </main>
+
+      {/* Chat Sidebar - only show on roadmap/session pages */}
+      {roadmapId && (
+        <ChatSidebar
+          isOpen={sidebarOpen}
+          onToggle={() => setSidebarOpen(!sidebarOpen)}
+          roadmapId={roadmapId}
+          sessionId={sessionId}
+        />
+      )}
     </div>
   );
 }
