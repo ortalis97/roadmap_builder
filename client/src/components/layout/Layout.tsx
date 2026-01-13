@@ -6,7 +6,8 @@ import { ChatSidebar } from '../ChatSidebar';
 export function Layout() {
   const { user, signOut } = useAuth();
   const params = useParams<{ id?: string; roadmapId?: string; sessionId?: string }>();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarWidth, setSidebarWidth] = useState(384);
 
   // Handle both route patterns: /roadmaps/:id and /roadmaps/:roadmapId/sessions/:sessionId
   const roadmapId = params.roadmapId || params.id;
@@ -56,6 +57,8 @@ export function Layout() {
           onToggle={() => setSidebarOpen(!sidebarOpen)}
           roadmapId={roadmapId}
           sessionId={sessionId}
+          width={sidebarWidth}
+          onWidthChange={setSidebarWidth}
         />
       )}
     </div>
