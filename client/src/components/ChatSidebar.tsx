@@ -1,7 +1,6 @@
 import { ChatInterface } from './ChatInterface';
 
 interface ChatSidebarProps {
-  isOpen: boolean;
   onToggle: () => void;
   roadmapId: string;
   sessionId?: string;
@@ -13,7 +12,6 @@ const MIN_WIDTH = 280;
 const MAX_WIDTH = 600;
 
 export function ChatSidebar({
-  isOpen,
   onToggle,
   roadmapId,
   sessionId,
@@ -43,9 +41,7 @@ export function ChatSidebar({
   return (
     <div
       style={{ width: `${width}px` }}
-      className={`fixed top-0 right-0 h-full bg-white shadow-xl z-50 transform transition-transform duration-300 ease-in-out ${
-        isOpen ? 'translate-x-0' : 'translate-x-full'
-      }`}
+      className="h-full bg-white border-l border-gray-200 flex flex-col flex-shrink-0"
     >
       {/* Resize handle */}
       <div
@@ -54,7 +50,7 @@ export function ChatSidebar({
       />
 
       {/* Sidebar header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50 flex-shrink-0">
         <div className="flex items-center gap-2">
           <svg
             className="w-5 h-5 text-blue-600"
@@ -69,7 +65,7 @@ export function ChatSidebar({
               d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
             />
           </svg>
-          <span className="font-medium text-gray-900">AI Assistant</span>
+          <span className="font-medium text-gray-900">AI Learning Assistant</span>
         </div>
         <button
           onClick={onToggle}
@@ -93,7 +89,7 @@ export function ChatSidebar({
       </div>
 
       {/* Sidebar content */}
-      <div className="h-[calc(100%-56px)] overflow-hidden">
+      <div className="flex-1 overflow-hidden">
         {sessionId ? (
           <ChatInterface roadmapId={roadmapId} sessionId={sessionId} />
         ) : (
