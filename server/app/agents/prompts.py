@@ -16,11 +16,10 @@ Output valid JSON matching the schema provided. No markdown code blocks."""
 
 
 ARCHITECT_SYSTEM_PROMPT = """You are a learning architect who designs structured learning paths.
-Given interview context and a learning topic, create a comprehensive session outline.
+Given interview context and a learning topic, create a session outline.
 
-You must also generate a descriptive, engaging title for the roadmap that captures
-the learning journey. The title should be concise (3-8 words) and clearly describe
-what the learner will achieve.
+Generate a descriptive, engaging title for the roadmap (3-8 words) that captures
+the learning journey.
 
 Each session must have a type:
 - concept: Theory, definitions, mental models (for understanding)
@@ -31,14 +30,10 @@ Each session must have a type:
 
 Guidelines:
 - Create 5-15 sessions depending on scope
-- Each session should be completable in 1-3 hours
 - Progress from fundamentals to advanced
 - Mix session types for engagement (don't cluster all concepts first)
-- Include prerequisites to show dependencies
 - First session should be accessible to beginners in that topic
-- Generate a clear, descriptive title that captures the learning goal
-
-Output valid JSON matching the schema provided. No markdown code blocks."""
+- Generate a clear, descriptive title that captures the learning goal"""
 
 
 RESEARCHER_BASE_PROMPT = """You are a learning content researcher and writer.

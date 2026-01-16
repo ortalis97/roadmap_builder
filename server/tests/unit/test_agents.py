@@ -80,28 +80,18 @@ class TestArchitectAgent:
     """Tests for the ArchitectAgent."""
 
     @pytest.mark.asyncio
-    async def test_create_outline_returns_session_outline(self, mock_gemini_client):
-        """Test that create_outline returns a title and structured session outline."""
-        mock_response = MagicMock()
-        mock_response.title = "Python Programming Fundamentals"
-        mock_response.sessions = [
-            MagicMock(
-                title="Introduction to Python",
-                objective="Learn basic syntax",
-                session_type="concept",
-                estimated_duration_minutes=60,
-                prerequisites=[],
-            ),
-            MagicMock(
-                title="Variables and Data Types",
-                objective="Understand data types",
-                session_type="tutorial",
-                estimated_duration_minutes=90,
-                prerequisites=[0],
-            ),
-        ]
-        mock_response.learning_path_summary = "A beginner Python course"
-        mock_response.total_estimated_hours = 2.5
+    async def test_create_outline_phase1_returns_minimal_outline(self, mock_gemini_client):
+        """Test that create_outline_phase1 returns title and minimal session list."""
+        from app.agents.architect import ArchitectPhase1Response, SessionOutlineMinimal
+
+        mock_response = ArchitectPhase1Response(
+            title="Python Programming Fundamentals",
+            sessions=[
+                SessionOutlineMinimal(title="Introduction to Python", session_type="concept"),
+                SessionOutlineMinimal(title="Variables and Data Types", session_type="tutorial"),
+            ],
+            learning_path_summary="A beginner Python course"
+        )
 
         agent = ArchitectAgent(mock_gemini_client)
 
@@ -110,6 +100,100 @@ class TestArchitectAgent:
         ) as mock_generate:
             mock_generate.return_value = mock_response
 
+            context = InterviewContext(topic="Python programming")
+            result = await agent.create_outline_phase1(context)
+
+            assert result.title == "Python Programming Fundamentals"
+            assert len(result.sessions) == 2
+            assert result.sessions[0].title == "Introduction to Python"
+            assert result.sessions[0].session_type == "concept"
+
+    @pytest.mark.asyncio
+    async def test_create_outline_two_phase_parallel(self, mock_gemini_client):
+        """Test that create_outline uses two-phase approach with parallel calls."""
+        from app.agents.architect import (
+            ArchitectPhase1Response,
+            SessionDetailResponse,
+            SessionOutlineMinimal,
+        )
+
+        phase1_response = ArchitectPhase1Response(
+            title="Python Mastery",
+            sessions=[
+                SessionOutlineMinimal(title="Intro", session_type="concept"),
+                SessionOutlineMinimal(title="Practice", session_type="practice"),
+            ],
+            learning_path_summary="Learn Python"
+        )
+
+        detail_responses = [
+            SessionDetailResponse(objective="Learn basics", estimated_duration_minutes=60, prerequisites=[]),
+            SessionDetailResponse(objective="Practice skills", estimated_duration_minutes=90, prerequisites=[0]),
+        ]
+
+        agent = ArchitectAgent(mock_gemini_client)
+
+        call_count = [0]  # Use list to allow mutation in closure
+
+        async def mock_generate_structured(prompt, response_model, **kwargs):
+            if response_model.__name__ == "ArchitectPhase1Response":
+                return phase1_response
+            else:
+                idx = call_count[0]
+                call_count[0] += 1
+                return detail_responses[idx % len(detail_responses)]
+
+        with patch.object(agent, "generate_structured", side_effect=mock_generate_structured):
+            context = InterviewContext(topic="Python")
+            title, outline = await agent.create_outline(context)
+
+            assert title == "Python Mastery"
+            assert len(outline.sessions) == 2
+            assert outline.sessions[0].objective == "Learn basics"
+            assert outline.sessions[1].objective == "Practice skills"
+            assert outline.sessions[0].session_type == SessionType.CONCEPT
+            assert outline.sessions[1].session_type == SessionType.PRACTICE
+            # Total hours calculated from session durations
+            assert outline.total_estimated_hours == 2.5  # (60 + 90) / 60
+
+    @pytest.mark.asyncio
+    async def test_create_outline_returns_session_outline(self, mock_gemini_client):
+        """Test that create_outline returns a title and structured session outline."""
+        from app.agents.architect import (
+            ArchitectPhase1Response,
+            SessionDetailResponse,
+            SessionOutlineMinimal,
+        )
+
+        # Phase 1 response
+        phase1_response = ArchitectPhase1Response(
+            title="Python Programming Fundamentals",
+            sessions=[
+                SessionOutlineMinimal(title="Introduction to Python", session_type="concept"),
+                SessionOutlineMinimal(title="Variables and Data Types", session_type="tutorial"),
+            ],
+            learning_path_summary="A beginner Python course"
+        )
+
+        # Phase 2 responses
+        detail_responses = [
+            SessionDetailResponse(objective="Learn basic syntax", estimated_duration_minutes=60, prerequisites=[]),
+            SessionDetailResponse(objective="Understand data types", estimated_duration_minutes=90, prerequisites=[0]),
+        ]
+
+        agent = ArchitectAgent(mock_gemini_client)
+
+        call_count = [0]
+
+        async def mock_generate_structured(prompt, response_model, **kwargs):
+            if response_model.__name__ == "ArchitectPhase1Response":
+                return phase1_response
+            else:
+                idx = call_count[0]
+                call_count[0] += 1
+                return detail_responses[idx % len(detail_responses)]
+
+        with patch.object(agent, "generate_structured", side_effect=mock_generate_structured):
             context = InterviewContext(
                 topic="Python programming",
             )

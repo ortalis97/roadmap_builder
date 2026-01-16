@@ -167,6 +167,13 @@ Use Playwright MCP for:
 - Visual regression testing
 - Cross-browser testing
 
+## Tool Restrictions
+
+**DO NOT use Meta-specific tools or plugins in this project:**
+- Do NOT use `mcp__plugin_meta_*` tools (meta_devmate, meta_www, etc.)
+- Do NOT use `meta:code_search` agent type
+- Use standard tools instead: `Read`, `Grep`, `Glob`, `WebSearch`, `WebFetch`, `Explore` agent
+
 ## Reference Documentation
 
 | Document | When to Read |
@@ -285,6 +292,42 @@ client/src/
 - **Model usage**: Use `client.models.generate_content(model="gemini-2.0-flash", ...)` pattern
 - **Async handling**: The SDK's `generate_content` is synchronous; wrap in `asyncio.run_in_executor()` for async FastAPI endpoints
 - **JSON output**: Request JSON-only output in the prompt and clean up markdown code blocks from response
+
+### Gemini Structured Output (Preferred for JSON)
+
+**Always use structured output for JSON responses** - it guarantees valid JSON and eliminates parsing errors.
+
+```python
+from google import genai
+from pydantic import BaseModel, Field
+
+class MyResponse(BaseModel):
+    name: str = Field(description="The name")
+    items: list[str] = Field(description="List of items")
+
+client = genai.Client(api_key="...")
+
+response = client.models.generate_content(
+    model="gemini-2.0-flash",
+    contents="Your prompt here",
+    config={
+        "response_mime_type": "application/json",
+        "response_json_schema": MyResponse.model_json_schema(),
+    },
+)
+
+# Parse directly with Pydantic
+result = MyResponse.model_validate_json(response.text)
+```
+
+**Key points:**
+- Use `response_json_schema` (NOT `response_schema`)
+- Pass `Model.model_json_schema()` to convert Pydantic to JSON Schema
+- Parse with `Model.model_validate_json(response.text)` (simpler than json.loads)
+- Add `Field(description="...")` to Pydantic fields for better model guidance
+- **Gemini 2.0 quirk**: Requires `propertyOrdering` in schema for consistent field order. Our `BaseAgent._add_property_ordering()` handles this automatically.
+
+**Docs**: https://ai.google.dev/gemini-api/docs/structured-output
 
 ### npm Restrictions (Company Computer)
 

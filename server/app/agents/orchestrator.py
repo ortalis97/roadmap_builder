@@ -365,11 +365,7 @@ class PipelineOrchestrator:
         self.state.stage = PipelineStage.SAVING
 
         # Use confirmed title, or fall back to suggested, or fall back to topic
-        title = (
-            self.state.confirmed_title
-            or self.state.suggested_title
-            or self.state.topic[:100]
-        )
+        title = self.state.confirmed_title or self.state.suggested_title or self.state.topic[:100]
 
         # Create roadmap document
         roadmap = Roadmap(
