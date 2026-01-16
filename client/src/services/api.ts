@@ -10,6 +10,7 @@ import type {
   ChatHistory,
   ChatRequest,
   ChatResponse,
+  StartCreationResponse,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
@@ -128,3 +129,30 @@ export async function clearChatHistory(
     { method: 'DELETE' }
   );
 }
+
+// Roadmap Creation API
+export async function startCreation(
+  draftId: string,
+  title: string
+): Promise<StartCreationResponse> {
+  return request<StartCreationResponse>('/api/v1/roadmaps/create/start', {
+    method: 'POST',
+    body: JSON.stringify({ draft_id: draftId, title }),
+  });
+}
+
+export function getInterviewSubmitUrl(): string {
+  return `${API_BASE_URL}/api/v1/roadmaps/create/interview`;
+}
+
+export function getReviewSubmitUrl(): string {
+  return `${API_BASE_URL}/api/v1/roadmaps/create/review`;
+}
+
+export async function cancelCreation(pipelineId: string): Promise<void> {
+  return request<void>(`/api/v1/roadmaps/create/${pipelineId}`, {
+    method: 'DELETE',
+  });
+}
+
+export { API_BASE_URL };

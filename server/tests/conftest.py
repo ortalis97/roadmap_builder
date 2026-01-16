@@ -7,6 +7,7 @@ from mongomock_motor import AsyncMongoMockClient
 
 from app.main import create_app
 from app.middleware.auth import get_current_user
+from app.models.agent_trace import AgentTrace
 from app.models.chat_history import ChatHistory
 from app.models.draft import Draft
 from app.models.roadmap import Roadmap
@@ -75,7 +76,7 @@ async def init_test_db():
 
     await init_beanie(
         database=database,
-        document_models=[ChatHistory, Draft, Roadmap, Session, User],
+        document_models=[AgentTrace, ChatHistory, Draft, Roadmap, Session, User],
     )
 
     yield database

@@ -26,12 +26,10 @@ class SessionSummary(BaseModel):
 class Roadmap(Document):
     """Roadmap document representing a learning journey.
 
-    References a Draft for the original raw text and contains
-    a lightweight array of session summaries for quick listing.
+    Contains a lightweight array of session summaries for quick listing.
     """
 
     user_id: Indexed(PydanticObjectId)  # type: ignore[valid-type]
-    draft_id: PydanticObjectId
     title: str
     summary: str | None = None
     sessions: list[SessionSummary] = Field(default_factory=list)

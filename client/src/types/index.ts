@@ -97,3 +97,82 @@ export interface ChatResponse {
   user_message: ChatMessage;
   assistant_message: ChatMessage;
 }
+
+// Roadmap creation types
+export interface ExampleOption {
+  label: string;
+  text: string;
+}
+
+export interface InterviewQuestion {
+  id: string;
+  question: string;
+  purpose: string;
+  example_options: ExampleOption[];
+  allows_freeform: boolean;
+}
+
+export interface InterviewAnswer {
+  question_id: string;
+  answer: string;
+}
+
+export interface StartCreationResponse {
+  pipeline_id: string;
+  questions: InterviewQuestion[];
+}
+
+export interface ValidationIssue {
+  id: string;
+  issue_type: 'overlap' | 'gap' | 'ordering' | 'coherence' | 'depth';
+  severity: 'low' | 'medium' | 'high';
+  description: string;
+  suggested_fix: string;
+}
+
+export interface ValidationResult {
+  is_valid: boolean;
+  issues: ValidationIssue[];
+  score: number;
+  summary: string;
+}
+
+export type CreationStage =
+  | 'idle'
+  | 'starting'
+  | 'interviewing'
+  | 'architecting'
+  | 'researching'
+  | 'validating'
+  | 'user_review'
+  | 'saving'
+  | 'complete'
+  | 'error';
+
+export interface CreationProgress {
+  stage: CreationStage;
+  message: string;
+  current_session?: number;
+  total_sessions?: number;
+  session_title?: string;
+}
+
+export interface SSEStageUpdateData {
+  stage: string;
+  message: string;
+}
+
+export interface SSESessionProgressData {
+  current: number;
+  total: number;
+  session_title: string;
+}
+
+export interface SSECompleteData {
+  roadmap_id: string;
+  message: string;
+}
+
+export interface SSEErrorData {
+  message: string;
+}
