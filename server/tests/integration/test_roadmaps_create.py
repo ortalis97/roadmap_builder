@@ -11,8 +11,8 @@ class TestRoadmapsCreateEndpoints:
     """Tests for the /api/v1/roadmaps/create/* endpoints."""
 
     @pytest.mark.asyncio
-    async def test_start_creation_success(self, client, test_draft):
-        """Test starting creation returns interview questions."""
+    async def test_start_creation_success(self, client):
+        """Test starting creation with topic returns interview questions."""
         # Create mock questions that match the expected structure
         mock_questions = [
             InterviewQuestion(
@@ -45,7 +45,7 @@ class TestRoadmapsCreateEndpoints:
                 ):
                     response = await client.post(
                         "/api/v1/roadmaps/create/start",
-                        json={"draft_id": str(test_draft.id), "title": "Learn Python"},
+                        json={"topic": "I want to learn Python programming"},
                     )
 
         assert response.status_code == 200
@@ -57,54 +57,16 @@ class TestRoadmapsCreateEndpoints:
         assert data["questions"][0]["question"] == "What is your experience level?"
 
     @pytest.mark.asyncio
-    async def test_start_creation_invalid_draft_id(self, client):
-        """Test starting creation with invalid draft ID returns 400."""
-        with patch("app.routers.roadmaps_create.is_gemini_configured", return_value=True):
-            response = await client.post(
-                "/api/v1/roadmaps/create/start",
-                json={"draft_id": "invalid", "title": "Test"},
-            )
-
-        assert response.status_code == 400
-        assert "Invalid draft ID" in response.json()["detail"]
-
-    @pytest.mark.asyncio
-    async def test_start_creation_draft_not_found(self, client):
-        """Test starting creation with non-existent draft returns 404."""
-        from tests.conftest import make_object_id
-
-        with patch("app.routers.roadmaps_create.is_gemini_configured", return_value=True):
-            response = await client.post(
-                "/api/v1/roadmaps/create/start",
-                json={"draft_id": str(make_object_id()), "title": "Test"},
-            )
-
-        assert response.status_code == 404
-        assert "Draft not found" in response.json()["detail"]
-
-    @pytest.mark.asyncio
-    async def test_start_creation_ai_not_configured(self, client, test_draft):
+    async def test_start_creation_ai_not_configured(self, client):
         """Test starting creation without AI configured returns 503."""
         with patch("app.routers.roadmaps_create.is_gemini_configured", return_value=False):
             response = await client.post(
                 "/api/v1/roadmaps/create/start",
-                json={"draft_id": str(test_draft.id), "title": "Test"},
+                json={"topic": "Learn Python"},
             )
 
         assert response.status_code == 503
         assert "AI service not configured" in response.json()["detail"]
-
-    @pytest.mark.asyncio
-    async def test_start_creation_other_users_draft(self, client, other_user_draft):
-        """Test starting creation with another user's draft returns 404."""
-        with patch("app.routers.roadmaps_create.is_gemini_configured", return_value=True):
-            response = await client.post(
-                "/api/v1/roadmaps/create/start",
-                json={"draft_id": str(other_user_draft.id), "title": "Test"},
-            )
-
-        assert response.status_code == 404
-        assert "Draft not found" in response.json()["detail"]
 
     @pytest.mark.asyncio
     async def test_interview_submit_pipeline_not_found(self, client):
@@ -128,6 +90,21 @@ class TestRoadmapsCreateEndpoints:
             json={
                 "pipeline_id": "pipeline_nonexistent",
                 "accept_as_is": True,
+            },
+        )
+
+        assert response.status_code == 404
+        assert "Pipeline not found" in response.json()["detail"]
+
+    @pytest.mark.asyncio
+    async def test_review_submit_with_confirmed_title(self, client):
+        """Test submitting review with confirmed title to non-existent pipeline returns 404."""
+        response = await client.post(
+            "/api/v1/roadmaps/create/review",
+            json={
+                "pipeline_id": "pipeline_nonexistent",
+                "accept_as_is": True,
+                "confirmed_title": "My Custom Title",
             },
         )
 

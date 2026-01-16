@@ -81,8 +81,9 @@ class TestArchitectAgent:
 
     @pytest.mark.asyncio
     async def test_create_outline_returns_session_outline(self, mock_gemini_client):
-        """Test that create_outline returns a structured session outline."""
+        """Test that create_outline returns a title and structured session outline."""
         mock_response = MagicMock()
+        mock_response.title = "Python Programming Fundamentals"
         mock_response.sessions = [
             MagicMock(
                 title="Introduction to Python",
@@ -110,14 +111,12 @@ class TestArchitectAgent:
             mock_generate.return_value = mock_response
 
             context = InterviewContext(
-                topic="Python",
-                title="Learn Python",
-                raw_input="I want to learn Python programming",
-                qa_pairs=[("Experience?", "Beginner")],
+                topic="Python programming",
             )
 
-            outline = await agent.create_outline(context)
+            title, outline = await agent.create_outline(context)
 
+            assert title == "Python Programming Fundamentals"
             assert len(outline.sessions) == 2
             assert outline.sessions[0].title == "Introduction to Python"
             assert outline.sessions[0].session_type == SessionType.CONCEPT
@@ -167,10 +166,7 @@ class TestResearcherAgent:
             )
 
             context = InterviewContext(
-                topic="Python",
-                title="Learn Python",
-                raw_input="I want to learn Python",
-                qa_pairs=[],
+                topic="Python programming",
             )
 
             session = await researcher.research_session(

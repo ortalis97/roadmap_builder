@@ -9,7 +9,6 @@ from app.main import create_app
 from app.middleware.auth import get_current_user
 from app.models.agent_trace import AgentTrace
 from app.models.chat_history import ChatHistory
-from app.models.draft import Draft
 from app.models.roadmap import Roadmap
 from app.models.session import Session
 from app.models.user import User
@@ -76,7 +75,7 @@ async def init_test_db():
 
     await init_beanie(
         database=database,
-        document_models=[AgentTrace, ChatHistory, Draft, Roadmap, Session, User],
+        document_models=[AgentTrace, ChatHistory, Roadmap, Session, User],
     )
 
     yield database
@@ -137,33 +136,10 @@ async def client_no_auth(app_no_auth, init_test_db) -> AsyncClient:
 
 
 @pytest.fixture
-async def test_draft(mock_user: User, init_test_db) -> Draft:
-    """Create a test draft in the database."""
-    draft = Draft(
-        user_id=mock_user.id,
-        raw_text="Learn Python: variables, functions, classes, modules, testing",
-    )
-    await draft.insert()
-    return draft
-
-
-@pytest.fixture
-async def other_user_draft(other_user: User, init_test_db) -> Draft:
-    """Create a draft belonging to a different user."""
-    draft = Draft(
-        user_id=other_user.id,
-        raw_text="Learn JavaScript: basics, DOM, async, React",
-    )
-    await draft.insert()
-    return draft
-
-
-@pytest.fixture
-async def test_roadmap(mock_user: User, test_draft: Draft, init_test_db) -> Roadmap:
+async def test_roadmap(mock_user: User, init_test_db) -> Roadmap:
     """Create a test roadmap in the database."""
     roadmap = Roadmap(
         user_id=mock_user.id,
-        draft_id=test_draft.id,
         title="Learn Python",
         summary="A comprehensive Python learning journey",
         sessions=[],
@@ -174,7 +150,7 @@ async def test_roadmap(mock_user: User, test_draft: Draft, init_test_db) -> Road
 
 @pytest.fixture
 async def test_roadmap_with_sessions(
-    mock_user: User, test_draft: Draft, init_test_db
+    mock_user: User, init_test_db
 ) -> tuple[Roadmap, list[Session]]:
     """Create a test roadmap with sessions in the database."""
     from app.models.roadmap import SessionSummary
@@ -182,7 +158,6 @@ async def test_roadmap_with_sessions(
     # Create roadmap first
     roadmap = Roadmap(
         user_id=mock_user.id,
-        draft_id=test_draft.id,
         title="Learn Python",
         summary="A comprehensive Python learning journey",
         sessions=[],
@@ -216,11 +191,10 @@ async def test_roadmap_with_sessions(
 
 
 @pytest.fixture
-async def other_user_roadmap(other_user: User, other_user_draft: Draft, init_test_db) -> Roadmap:
+async def other_user_roadmap(other_user: User, init_test_db) -> Roadmap:
     """Create a roadmap belonging to a different user."""
     roadmap = Roadmap(
         user_id=other_user.id,
-        draft_id=other_user_draft.id,
         title="Learn JavaScript",
         summary="A JavaScript learning journey",
         sessions=[],

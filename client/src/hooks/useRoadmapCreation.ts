@@ -3,7 +3,7 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
-import { createDraft, startCreation, getInterviewSubmitUrl, getReviewSubmitUrl, cancelCreation } from '../services/api';
+import { startCreation, getInterviewSubmitUrl, getReviewSubmitUrl, cancelCreation } from '../services/api';
 import { createSSEConnection, type SSEConnection } from '../services/sseClient';
 import type {
   CreationStage,
@@ -15,6 +15,7 @@ import type {
   SSESessionProgressData,
   SSECompleteData,
   SSEErrorData,
+  SSETitleSuggestionData,
 } from '../types';
 
 export interface CreationState {
@@ -23,6 +24,8 @@ export interface CreationState {
   pipelineId: string | null;
   questions: InterviewQuestion[];
   answers: InterviewAnswer[];
+  suggestedTitle: string | null;
+  confirmedTitle: string | null;
   validationResult: ValidationResult | null;
   roadmapId: string | null;
   error: string | null;
@@ -34,6 +37,8 @@ const initialState: CreationState = {
   pipelineId: null,
   questions: [],
   answers: [],
+  suggestedTitle: null,
+  confirmedTitle: null,
   validationResult: null,
   roadmapId: null,
   error: null,
@@ -73,6 +78,13 @@ export function useRoadmapCreation() {
         });
         break;
       }
+      case 'title_suggestion': {
+        const data = event.data as SSETitleSuggestionData;
+        updateState({
+          suggestedTitle: data.suggested_title,
+        });
+        break;
+      }
       case 'validation_result': {
         const data = event.data as ValidationResult;
         updateState({
@@ -103,15 +115,12 @@ export function useRoadmapCreation() {
     }
   }, [updateState]);
 
-  const start = useCallback(async (rawText: string, title: string) => {
+  const start = useCallback(async (topic: string) => {
     try {
       updateState({ stage: 'starting', error: null });
 
-      // Create draft first
-      const draft = await createDraft(rawText);
-
-      // Start creation pipeline
-      const response = await startCreation(draft.id, title);
+      // Start creation pipeline with topic
+      const response = await startCreation(topic);
 
       updateState({
         stage: 'interviewing',
@@ -186,6 +195,7 @@ export function useRoadmapCreation() {
           pipeline_id: state.pipelineId,
           accept_as_is: acceptAsIs,
           issues_to_fix: issuesToFix,
+          confirmed_title: state.confirmedTitle || state.suggestedTitle,
         },
         handleSSEEvent,
         (error) => {
@@ -206,7 +216,11 @@ export function useRoadmapCreation() {
         progress: { stage: 'error', message: 'Failed to connect' },
       });
     }
-  }, [state.pipelineId, handleSSEEvent, updateState]);
+  }, [state.pipelineId, state.confirmedTitle, state.suggestedTitle, handleSSEEvent, updateState]);
+
+  const setConfirmedTitle = useCallback((title: string) => {
+    updateState({ confirmedTitle: title });
+  }, [updateState]);
 
   const reset = useCallback(async () => {
     // Close any active connection
@@ -232,6 +246,7 @@ export function useRoadmapCreation() {
     start,
     submitAnswers,
     submitReview,
+    setConfirmedTitle,
     reset,
   };
 }

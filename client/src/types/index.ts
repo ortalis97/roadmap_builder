@@ -1,10 +1,3 @@
-export interface Draft {
-  id: string;
-  user_id: string;
-  raw_text: string;
-  created_at: string;
-}
-
 export interface SessionSummary {
   id: string;
   title: string;
@@ -55,7 +48,6 @@ export interface RoadmapListItem {
 
 export interface Roadmap {
   id: string;
-  draft_id: string;
   title: string;
   summary: string | null;
   sessions: SessionSummary[];
@@ -175,4 +167,8 @@ export interface SSECompleteData {
 
 export interface SSEErrorData {
   message: string;
+}
+
+export interface SSETitleSuggestionData {
+  suggested_title: string;
 }

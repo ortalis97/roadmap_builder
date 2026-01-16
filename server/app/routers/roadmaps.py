@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from app.middleware.auth import get_current_user
-from app.models.roadmap import Roadmap, SessionSummary
+from app.models.roadmap import Roadmap
 from app.models.session import Session
 from app.models.user import User
 

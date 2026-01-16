@@ -61,8 +61,7 @@ Type: {outline_item.session_type.value}
 Objective: {outline_item.objective}
 Duration: ~{outline_item.estimated_duration_minutes} minutes
 
-Overall Topic: {interview_context.title}
-Learner Context: {interview_context.topic}
+Learning Topic: {interview_context.topic}
 
 Previous sessions covered:
 {prev_context}

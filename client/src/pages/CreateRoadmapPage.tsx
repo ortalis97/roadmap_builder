@@ -4,12 +4,12 @@ import { useRoadmapCreation } from '../hooks/useRoadmapCreation';
 import { InterviewQuestions } from '../components/creation/InterviewQuestions';
 import { CreationProgressDisplay } from '../components/creation/CreationProgress';
 import { ValidationReview } from '../components/creation/ValidationReview';
+import { TitleConfirmation } from '../components/creation/TitleConfirmation';
 
 export function CreateRoadmapPage() {
-  const [title, setTitle] = useState('');
-  const [rawText, setRawText] = useState('');
+  const [topic, setTopic] = useState('');
   const navigate = useNavigate();
-  const { state, start, submitAnswers, submitReview, reset } = useRoadmapCreation();
+  const { state, start, submitAnswers, submitReview, setConfirmedTitle, reset } = useRoadmapCreation();
 
   // Navigate to roadmap on completion
   useEffect(() => {
@@ -30,10 +30,15 @@ export function CreateRoadmapPage() {
 
   const handleInitialSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !rawText.trim()) {
+    if (!topic.trim()) {
       return;
     }
-    start(rawText.trim(), title.trim());
+    start(topic.trim());
+  };
+
+  const handleTitleConfirm = (title: string) => {
+    setConfirmedTitle(title);
+    submitReview(true);
   };
 
   const handleAcceptValidation = () => {
@@ -77,10 +82,17 @@ export function CreateRoadmapPage() {
     );
   }
 
-  // Show validation review
+  // Show validation review with title confirmation
   if (state.stage === 'user_review' && state.validationResult) {
     return (
-      <div className="max-w-3xl mx-auto py-6">
+      <div className="max-w-3xl mx-auto py-6 space-y-6">
+        {state.suggestedTitle && (
+          <TitleConfirmation
+            suggestedTitle={state.suggestedTitle}
+            onConfirm={handleTitleConfirm}
+            isSubmitting={false}
+          />
+        )}
         <ValidationReview
           validationResult={state.validationResult}
           onAccept={handleAcceptValidation}
@@ -114,7 +126,7 @@ export function CreateRoadmapPage() {
     );
   }
 
-  // Show initial form (idle state)
+  // Show initial form (idle state) - chat-like input
   return (
     <div className="max-w-3xl mx-auto">
       <div className="mb-6">
@@ -129,64 +141,63 @@ export function CreateRoadmapPage() {
         </Link>
       </div>
 
-      <div className="bg-white rounded-lg shadow p-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">
-          Create New Roadmap
+      <div className="bg-white rounded-lg shadow p-8">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2 text-center">
+          What do you want to learn?
         </h1>
-        <p className="text-gray-600 mb-6">
-          Our AI will ask you a few questions to personalize your learning path
+        <p className="text-gray-600 mb-8 text-center">
+          Tell us what you want to learn and we'll create a personalized roadmap for you
         </p>
 
-        <form onSubmit={handleInitialSubmit} className="space-y-6">
-          <div>
-            <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-              Roadmap Title
-            </label>
+        <form onSubmit={handleInitialSubmit} className="space-y-4">
+          <div className="relative">
             <input
               type="text"
-              id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g., Learn React Fundamentals"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              placeholder="e.g., Learn Python for data science"
+              className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg"
               required
+              autoFocus
             />
-          </div>
-
-          <div>
-            <label htmlFor="rawText" className="block text-sm font-medium text-gray-700 mb-1">
-              Paste Your Learning Plan
-            </label>
-            <textarea
-              id="rawText"
-              value={rawText}
-              onChange={(e) => setRawText(e.target.value)}
-              placeholder="Paste your learning plan, notes, or outline here..."
-              rows={12}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
-              required
-            />
-            <p className="mt-1 text-sm text-gray-500">
-              We'll analyze your plan and ask clarifying questions to create a personalized roadmap.
-            </p>
-          </div>
-
-          <div className="flex gap-3">
             <button
               type="submit"
-              disabled={state.stage === 'starting' || !title.trim() || !rawText.trim()}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={state.stage === 'starting' || !topic.trim()}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {state.stage === 'starting' ? 'Starting...' : 'Continue'}
+              {state.stage === 'starting' ? (
+                <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              )}
             </button>
-            <Link
-              to="/"
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
-            >
-              Cancel
-            </Link>
           </div>
         </form>
+
+        <div className="mt-8 pt-6 border-t border-gray-200">
+          <p className="text-sm text-gray-500 mb-3">Examples:</p>
+          <div className="flex flex-wrap gap-2">
+            {[
+              'Learn Python for data science',
+              'Master React and TypeScript',
+              'Understand machine learning basics',
+              'Build mobile apps with Flutter',
+            ].map((example) => (
+              <button
+                key={example}
+                onClick={() => setTopic(example)}
+                className="text-sm px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors"
+              >
+                {example}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

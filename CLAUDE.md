@@ -43,10 +43,11 @@ roadmap_builder/
 ├── client/                     # React frontend
 │   ├── src/
 │   │   ├── components/         # Reusable UI components
-│   │   │   └── layout/         # Layout, ProtectedRoute
+│   │   │   ├── layout/         # Layout, ProtectedRoute
+│   │   │   └── creation/       # Roadmap creation flow components
 │   │   ├── pages/              # Route-level components
-│   │   ├── hooks/              # Custom React hooks (useRoadmaps)
-│   │   ├── services/           # API client, Firebase
+│   │   ├── hooks/              # Custom React hooks
+│   │   ├── services/           # API client, Firebase, SSE client
 │   │   ├── context/            # React context (AuthContext)
 │   │   ├── types/              # TypeScript types
 │   │   ├── App.tsx             # Main app with routing
@@ -64,14 +65,26 @@ roadmap_builder/
 │   │   ├── models/             # Pydantic + Beanie models
 │   │   │   ├── __init__.py
 │   │   │   ├── user.py         # User document model
-│   │   │   ├── draft.py        # Draft document model
 │   │   │   ├── roadmap.py      # Roadmap document model
-│   │   │   └── session.py      # Session document model
+│   │   │   ├── session.py      # Session document model
+│   │   │   ├── chat_history.py # Chat history model
+│   │   │   └── agent_trace.py  # Agent trace for debugging
 │   │   ├── routers/            # API route handlers
 │   │   │   ├── __init__.py
 │   │   │   ├── auth.py         # Auth endpoints (/auth/me)
-│   │   │   ├── drafts.py       # Draft endpoints
-│   │   │   └── roadmaps.py     # Roadmap endpoints
+│   │   │   ├── roadmaps.py     # Roadmap/session endpoints
+│   │   │   ├── roadmaps_create.py # Multi-agent creation pipeline
+│   │   │   └── chat.py         # AI chat endpoints
+│   │   ├── agents/             # Multi-agent pipeline
+│   │   │   ├── __init__.py
+│   │   │   ├── base.py         # Base agent class
+│   │   │   ├── interviewer.py  # Interview question generation
+│   │   │   ├── architect.py    # Session structure design
+│   │   │   ├── researcher.py   # Session content creation
+│   │   │   ├── validator.py    # Quality validation
+│   │   │   ├── orchestrator.py # Pipeline coordination
+│   │   │   ├── prompts.py      # Agent prompts
+│   │   │   └── state.py        # Pipeline state models
 │   │   ├── services/           # Business logic
 │   │   │   ├── __init__.py
 │   │   │   └── ai_service.py   # Gemini AI integration
@@ -81,6 +94,9 @@ roadmap_builder/
 │   │   └── utils/
 │   ├── venv/                   # Python virtual environment
 │   ├── tests/
+│   │   ├── unit/               # Unit tests
+│   │   ├── integration/        # Integration tests
+│   │   └── conftest.py         # Test fixtures
 │   ├── requirements.txt
 │   ├── pyproject.toml
 │   └── .env.example
@@ -214,13 +230,16 @@ Use Playwright MCP for:
 User(firebase_uid, email, name, picture, created_at, updated_at)
 
 # Roadmap - main learning journey
-Roadmap(user_id, title, summary, sessions[], created_at, updated_at, last_accessed_at)
+Roadmap(user_id, title, summary, sessions[], created_at, updated_at)
 
-# Session - embedded in Roadmap
-Session(id, title, content, status, notes, order)
+# Session - separate collection, linked to roadmap
+Session(roadmap_id, order, title, content, status, notes, created_at, updated_at)
 
 # ChatHistory - separate collection
 ChatHistory(roadmap_id, session_id, messages[])
+
+# AgentTrace - for debugging pipeline runs
+AgentTrace(pipeline_id, user_id, initial_topic, initial_title, events[], started_at, completed_at)
 ```
 
 ## Testing Strategy

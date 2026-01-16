@@ -10,7 +10,7 @@ See [PRD.md](PRD.md) for the complete product vision, user stories, and detailed
 
 ## Current Status
 
-### Implemented ✅
+### Implemented
 
 **Phase A: Backend Skeleton**
 - FastAPI application with health endpoint
@@ -31,26 +31,39 @@ See [PRD.md](PRD.md) for the complete product vision, user stories, and detailed
 - Graceful degradation when Firebase not configured
 
 **Phase 2: Basic UI & Roadmap Storage**
-- Draft, Roadmap, Session Beanie document models
-- `/api/v1/drafts` endpoint (create, get)
-- `/api/v1/roadmaps` endpoints (list, create, get, delete)
+- Roadmap, Session Beanie document models
+- `/api/v1/roadmaps` endpoints (list, get, delete)
 - React + Vite + TypeScript + Tailwind frontend
 - Firebase client-side auth (Google OAuth)
 - Dashboard showing user's roadmaps
-- Create roadmap form (paste raw text)
 - Roadmap detail view with delete
 
-**Phase 3: AI Session Parsing**
-- Gemini API integration (google-genai SDK)
-- AI service layer for session generation
-- Structured prompt engineering for JSON output
-- Sessions automatically generated when creating roadmap
-- Session documents stored in MongoDB
+**Phase 3: AI-Powered Roadmap Creation**
+- Multi-agent pipeline for intelligent roadmap generation:
+  - **Interviewer Agent**: Asks clarifying questions about learning goals
+  - **Architect Agent**: Designs session structure and generates descriptive title
+  - **Researcher Agents**: Creates detailed content for each session type
+  - **Validator Agent**: Checks for gaps, overlaps, and coherence
+- Simplified "What do you want to learn?" chat-like input
+- AI-generated roadmap titles with user confirmation
+- Server-Sent Events (SSE) for real-time progress streaming
+- Validation review step before saving
 
-### Planned 📋
+**Phase 4: Progress & Notes**
+- Session status tracking (not_started, in_progress, done, skipped)
+- Progress percentage calculation
+- Notes editor per session
 
-- Phase 4: Progress & Notes (session tracking, notes editor)
-- Phase 5: AI Assistant & Polish (contextual chat, mobile responsive)
+**Phase 5: AI Assistant**
+- Contextual AI chat assistant per session
+- Chat history persistence
+- Real-time AI responses with context awareness
+
+### Planned
+
+- Mobile responsive design
+- Export/import functionality
+- Sharing roadmaps
 
 ## Tech Stack
 
@@ -75,23 +88,39 @@ roadmap_builder/
 │   │   │   └── auth.py         # Firebase token verification
 │   │   ├── routers/
 │   │   │   ├── auth.py         # Auth endpoints (/auth/me)
-│   │   │   ├── drafts.py       # Draft endpoints
-│   │   │   └── roadmaps.py     # Roadmap endpoints
-│   │   └── models/
-│   │       ├── user.py         # User document model
-│   │       ├── draft.py        # Draft document model
-│   │       ├── roadmap.py      # Roadmap document model
-│   │       └── session.py      # Session document model
+│   │   │   ├── roadmaps.py     # Roadmap/session endpoints
+│   │   │   ├── roadmaps_create.py # Multi-agent creation pipeline
+│   │   │   └── chat.py         # AI chat endpoints
+│   │   ├── agents/             # Multi-agent pipeline
+│   │   │   ├── base.py         # Base agent class
+│   │   │   ├── interviewer.py  # Interview question generation
+│   │   │   ├── architect.py    # Session structure design
+│   │   │   ├── researcher.py   # Session content creation
+│   │   │   ├── validator.py    # Quality validation
+│   │   │   ├── orchestrator.py # Pipeline coordination
+│   │   │   ├── prompts.py      # Agent prompts
+│   │   │   └── state.py        # Pipeline state models
+│   │   ├── models/
+│   │   │   ├── user.py         # User document model
+│   │   │   ├── roadmap.py      # Roadmap document model
+│   │   │   ├── session.py      # Session document model
+│   │   │   ├── chat_history.py # Chat history model
+│   │   │   └── agent_trace.py  # Agent trace model
+│   │   └── services/
+│   │       └── ai_service.py   # Gemini API integration
+│   ├── tests/                  # Test suite
 │   ├── venv/                   # Python virtual environment
 │   ├── requirements.txt
 │   └── .env                    # Environment variables (not committed)
 ├── client/                     # React frontend
 │   ├── src/
 │   │   ├── components/         # Reusable UI components
+│   │   │   ├── creation/       # Roadmap creation components
+│   │   │   └── layout/         # Layout components
 │   │   ├── context/            # React context (AuthContext)
-│   │   ├── hooks/              # Custom hooks (useRoadmaps)
+│   │   ├── hooks/              # Custom hooks
 │   │   ├── pages/              # Route pages
-│   │   ├── services/           # API client, Firebase
+│   │   ├── services/           # API client, Firebase, SSE
 │   │   └── types/              # TypeScript types
 │   ├── package.json
 │   └── .env                    # Firebase config (not committed)
