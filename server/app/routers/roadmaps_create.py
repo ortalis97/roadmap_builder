@@ -1,5 +1,7 @@
 """Routes for multi-agent roadmap creation with SSE streaming."""
 
+import json
+
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -182,7 +184,7 @@ async def submit_interview(
             async for event in pipeline.run_pipeline():
                 yield {
                     "event": event.event,
-                    "data": event.encode(),
+                    "data": json.dumps(event.data),
                 }
         except Exception as e:
             logger.exception("Pipeline error", error=str(e))
@@ -238,7 +240,7 @@ async def submit_review(
             ):
                 yield {
                     "event": event.event,
-                    "data": event.encode(),
+                    "data": json.dumps(event.data),
                 }
         except Exception as e:
             logger.exception("Review processing error", error=str(e))

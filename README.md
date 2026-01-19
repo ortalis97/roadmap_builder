@@ -61,6 +61,7 @@ See [PRD.md](PRD.md) for the complete product vision, user stories, and detailed
 
 ### Planned
 
+- Markdown rendering for session content (content is generated with markdown but not rendered)
 - Mobile responsive design
 - Export/import functionality
 - Sharing roadmaps

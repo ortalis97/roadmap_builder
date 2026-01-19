@@ -71,7 +71,8 @@ export async function createSSEConnection(
         buffer += decoder.decode(value, { stream: true });
 
         // Parse SSE events from buffer
-        const lines = buffer.split('\n');
+        // SSE uses CRLF (\r\n) line endings, so we split on \n and trim \r
+        const lines = buffer.split('\n').map(line => line.replace(/\r$/, ''));
         buffer = lines.pop() || ''; // Keep incomplete line in buffer
 
         let currentEvent = '';
