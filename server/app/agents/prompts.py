@@ -44,6 +44,7 @@ Content should:
 - Use clear explanations with examples
 - Include practical takeaways
 - Format in markdown for readability
+- Use markdown tables for tabular data (NOT inside code blocks)
 - Be appropriate for self-directed learning
 
 Output valid JSON matching the schema provided. No markdown code blocks."""
@@ -57,7 +58,7 @@ For concept sessions:
 - Start with the "why" - motivation and context
 - Define key terms clearly
 - Use analogies and mental models
-- Include visual diagrams (described in markdown)
+- Include visual diagrams using markdown tables (NOT in code blocks)
 - Connect to real-world applications
 - End with summary of key takeaways
 
@@ -91,7 +92,7 @@ For practice sessions:
 - Start with warm-up exercises
 - Progress in difficulty
 - Include multiple exercise types
-- Provide hints (hidden/expandable)
+- Provide hints using markdown blockquotes with a "Hint:" prefix (e.g., "> **Hint:** Consider...")
 - Include solutions with explanations
 - Suggest extension challenges for advanced learners
 
