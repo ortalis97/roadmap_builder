@@ -610,6 +610,20 @@ The MVP is successful when a user can complete the full journey: paste a learnin
 - Guided roadmap creation (AI interview)
 - Roadmap editing with AI suggestions
 - Weekly review/reflection features
+- **YouTube Agent** — AI agent that finds relevant video recommendations for each session
+  - Runs after Researcher agent to ensure videos align with generated content
+  - Searches YouTube for educational content matching session topics
+  - Provides curated video links with descriptions, duration, and channel info
+  - Filters for quality (views, ratings, channel reputation)
+  - **Data model**: Add `resources: list[VideoResource]` field to Session model
+    - Structured storage enables refresh, filtering, and analytics
+    - UI renders as markdown in a "Recommended Videos" section
+  - **Pipeline integration**:
+    ```
+    Researcher → YouTube Agent → Validator → Save
+        ↓              ↓
+    content      video links → merge into ResearchedSession
+    ```
 
 ### Integration Opportunities
 - Export to Notion/Google Docs
@@ -622,6 +636,14 @@ The MVP is successful when a user can complete the full journey: paste a learnin
 - Light collaboration features
 - Mobile native apps (React Native)
 - Offline support with sync
+
+### Internationalization (i18n)
+- **Hebrew support (RTL)** — Full right-to-left layout support for Hebrew speakers
+  - RTL text direction for UI components
+  - Hebrew UI translations
+  - RTL-aware markdown rendering
+  - Bidirectional text handling for mixed Hebrew/English content
+- Additional language support as needed
 
 ---
 
@@ -710,7 +732,47 @@ Rules:
 
 ---
 
-## 15. Appendix
+## 15. Deployment Strategy
+
+### Overview
+
+The application is deployed using a low-cost, easy-to-manage stack:
+
+| Component | Service | Cost |
+|-----------|---------|------|
+| **Frontend** | Vercel | Free |
+| **Backend** | Railway | Free ($5 credit/month) |
+| **Database** | MongoDB Atlas | Free (M0 tier) |
+| **Auth** | Firebase | Free |
+| **AI** | Gemini API | Free tier |
+
+### Architecture
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│     Vercel      │────▶│     Railway     │────▶│  MongoDB Atlas  │
+│  (React SPA)    │     │   (FastAPI)     │     │   (Database)    │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+        │                       │
+        │                       ▼
+        │               ┌─────────────────┐
+        └──────────────▶│  Firebase Auth  │
+                        └─────────────────┘
+```
+
+### Key Considerations
+
+- **SSE Streaming**: Railway supports long-lived connections required for real-time roadmap creation progress
+- **Cold Starts**: Railway free tier runs continuously (no cold starts) until $5 credit exhausted
+- **Fallback**: Can migrate backend to Render if Railway credits become insufficient
+
+### Detailed Plan
+
+See [`.agents/plans/deployment-railway-vercel.md`](.agents/plans/deployment-railway-vercel.md) for step-by-step implementation instructions.
+
+---
+
+## 16. Appendix
 
 ### Data Models (Pydantic/Beanie)
 
