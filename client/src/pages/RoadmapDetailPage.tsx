@@ -125,6 +125,7 @@ export function RoadmapDetailPage() {
                 {sessionsWithStatus.map((session) => (
                   <div
                     key={session.id}
+                    dir={direction}
                     className="flex items-center gap-3 p-4 border border-gray-200 rounded-md hover:border-gray-300 transition-colors"
                   >
                     <SessionStatusIcon
@@ -139,12 +140,12 @@ export function RoadmapDetailPage() {
                     />
                     <Link
                       to={`/roadmaps/${id}/sessions/${session.id}`}
-                      className="flex-1 flex items-center"
+                      className="flex-1 flex items-center gap-2"
                     >
-                      <span className="text-sm text-gray-500 mr-2">
+                      <span className="text-sm text-gray-500">
                         #{session.order}
                       </span>
-                      <span className="font-medium hover:text-blue-600" dir={direction}>
+                      <span className="font-medium hover:text-blue-600">
                         {session.title}
                       </span>
                     </Link>
