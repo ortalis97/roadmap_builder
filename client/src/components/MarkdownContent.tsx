@@ -6,11 +6,17 @@ import { CodeBlock } from './CodeBlock';
 interface MarkdownContentProps {
   content: string;
   className?: string;
+  direction?: 'ltr' | 'rtl';
 }
 
-export function MarkdownContent({ content, className = '' }: MarkdownContentProps) {
+export function MarkdownContent({
+  content,
+  className = '',
+  direction = 'ltr',
+}: MarkdownContentProps) {
   return (
     <div
+      dir={direction}
       className={`prose prose-sm max-w-none prose-headings:text-gray-900 prose-p:text-gray-700 prose-strong:text-gray-900 prose-ul:text-gray-700 prose-ol:text-gray-700 prose-code:text-gray-800 prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded ${className}`}
     >
       <ReactMarkdown
@@ -21,12 +27,12 @@ export function MarkdownContent({ content, className = '' }: MarkdownContentProp
             const match = /language-(\w+)/.exec(className || '');
             const codeString = String(children).replace(/\n$/, '');
 
-            // Fenced code block (has language or multiline)
+            // Fenced code block (has language or multiline) - always LTR
             if (match || codeString.includes('\n')) {
               return (
-                <CodeBlock language={match?.[1]}>
-                  {codeString}
-                </CodeBlock>
+                <div dir="ltr">
+                  <CodeBlock language={match?.[1]}>{codeString}</CodeBlock>
+                </div>
               );
             }
 

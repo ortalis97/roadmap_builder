@@ -57,6 +57,7 @@ export function NotesEditor({ initialNotes, onSave, isSaving = false }: NotesEdi
         )}
       </div>
       <textarea
+        dir="auto"
         value={notes}
         onChange={handleChange}
         placeholder="Add your notes here..."

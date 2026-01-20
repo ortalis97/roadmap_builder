@@ -4,6 +4,7 @@
 
 import { useState } from 'react';
 import type { InterviewQuestion, InterviewAnswer } from '../../types';
+import { getTextDirection } from '../../utils/language';
 
 interface InterviewQuestionsProps {
   questions: InterviewQuestion[];
@@ -58,10 +59,18 @@ export function InterviewQuestions({
               {index + 1}
             </span>
             <div className="flex-1">
-              <h3 className="text-lg font-medium text-gray-900 mb-1">
+              <h3
+                className="text-lg font-medium text-gray-900 mb-1"
+                dir={getTextDirection(question.question)}
+              >
                 {question.question}
               </h3>
-              <p className="text-sm text-gray-500">{question.purpose}</p>
+              <p
+                className="text-sm text-gray-500"
+                dir={getTextDirection(question.purpose)}
+              >
+                {question.purpose}
+              </p>
             </div>
           </div>
 
@@ -91,6 +100,7 @@ export function InterviewQuestions({
                 Or write your own answer:
               </label>
               <textarea
+                dir="auto"
                 value={answers[question.id] || ''}
                 onChange={e => handleTextChange(question.id, e.target.value)}
                 placeholder="Type your answer..."

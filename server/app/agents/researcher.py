@@ -11,6 +11,7 @@ from app.agents.prompts import (
     RESEARCHER_BASE_PROMPT,
     REVIEW_RESEARCHER_PROMPT,
     TUTORIAL_RESEARCHER_PROMPT,
+    get_language_instruction,
 )
 from app.agents.state import (
     InterviewContext,
@@ -43,6 +44,7 @@ class ResearcherAgent(BaseAgent):
         outline_item: SessionOutlineItem,
         interview_context: InterviewContext,
         previous_sessions: list[ResearchedSession],
+        language: str = "en",
     ) -> ResearchedSession:
         """Create detailed content for a single session."""
         # Build context from previous sessions
@@ -54,7 +56,8 @@ class ResearcherAgent(BaseAgent):
             else "None yet"
         )
 
-        prompt = f"""Create detailed content for this learning session:
+        language_instruction = get_language_instruction(language)
+        prompt = f"""{language_instruction}Create detailed content for this learning session:
 
 Session: {outline_item.title}
 Type: {outline_item.session_type.value}

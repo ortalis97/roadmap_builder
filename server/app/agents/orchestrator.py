@@ -27,6 +27,7 @@ from app.models.agent_trace import AgentSpan, AgentTrace
 from app.models.roadmap import Roadmap, SessionSummary
 from app.models.session import Session
 from app.services.sse_service import SSEEvent
+from app.utils.language import detect_language
 
 logger = structlog.get_logger()
 
@@ -47,10 +48,14 @@ class PipelineOrchestrator:
         topic: str,
     ) -> None:
         """Initialize the pipeline state and trace."""
+        # Detect language from topic
+        detected_language = detect_language(topic)
+
         self.state = PipelineState(
             pipeline_id=self.pipeline_id,
             user_id=str(self.user_id),
             topic=topic,
+            language=detected_language,
             stage=PipelineStage.INITIALIZED,
         )
 
@@ -62,7 +67,11 @@ class PipelineOrchestrator:
         )
         await self.trace.insert()
 
-        self.logger.info("Pipeline initialized", topic=topic[:100])
+        self.logger.info(
+            "Pipeline initialized",
+            topic=topic[:100],
+            language=detected_language,
+        )
 
     async def generate_interview_questions(
         self,
@@ -84,6 +93,7 @@ class PipelineOrchestrator:
                 raw_input=topic,  # Use topic as raw_input
                 title=topic[:50],  # Use topic as title
                 max_questions=max_questions,
+                language=self.state.language,
             )
             self.state.interview_questions = questions
 
@@ -238,7 +248,10 @@ class PipelineOrchestrator:
 
         try:
             self.state.stage = PipelineStage.ARCHITECTING
-            suggested_title, outline = await architect.create_outline(interview_context)
+            suggested_title, outline = await architect.create_outline(
+                interview_context,
+                language=self.state.language,
+            )
             self.state.session_outline = outline
 
             architect.complete_span(
@@ -285,6 +298,7 @@ class PipelineOrchestrator:
                     outline_item=outline_item,
                     interview_context=interview_context,
                     previous_sessions=previous,
+                    language=self.state.language,
                 )
                 researcher.complete_span(
                     span,
@@ -372,6 +386,7 @@ class PipelineOrchestrator:
             user_id=self.user_id,
             title=title,
             summary=outline.learning_path_summary,
+            language=self.state.language,
         )
         await roadmap.insert()
 

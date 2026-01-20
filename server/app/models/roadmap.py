@@ -32,6 +32,7 @@ class Roadmap(Document):
     user_id: Indexed(PydanticObjectId)  # type: ignore[valid-type]
     title: str
     summary: str | None = None
+    language: str = "en"  # "en" for English, "he" for Hebrew
     sessions: list[SessionSummary] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(default_factory=utc_now)

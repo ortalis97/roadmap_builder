@@ -1,5 +1,26 @@
 """Prompts for all agents in the multi-agent pipeline."""
 
+
+def get_language_instruction(language: str) -> str:
+    """Get language instruction for prompts.
+
+    Args:
+        language: Language code ("en" or "he")
+
+    Returns:
+        Language instruction string to prepend to prompts, or empty string for English.
+    """
+    if language == "he":
+        return """
+IMPORTANT: Generate all content in Hebrew.
+- Write explanations, questions, and content in Hebrew
+- Keep technical terms in English (e.g., React, useState, API, Python)
+- Use Hebrew punctuation and right-to-left text flow
+
+"""
+    return ""
+
+
 INTERVIEWER_SYSTEM_PROMPT = """You are an expert learning consultant and domain specialist.
 Your role is to ask clarifying questions to understand the learner's goals, background,
 and preferences before creating their personalized learning roadmap.

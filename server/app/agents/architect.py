@@ -6,7 +6,7 @@ import uuid
 from pydantic import BaseModel, Field
 
 from app.agents.base import BaseAgent
-from app.agents.prompts import ARCHITECT_SYSTEM_PROMPT
+from app.agents.prompts import ARCHITECT_SYSTEM_PROMPT, get_language_instruction
 from app.agents.state import (
     InterviewContext,
     SessionOutline,
@@ -76,14 +76,16 @@ class ArchitectAgent(BaseAgent):
     async def create_outline_phase1(
         self,
         interview_context: InterviewContext,
+        language: str = "en",
     ) -> ArchitectPhase1Response:
         """Phase 1: Get roadmap title and session structure (fast).
 
         Returns minimal session info for quick response.
         """
         qa_context = "\n".join([f"Q: {q}\nA: {a}" for q, a in interview_context.qa_pairs])
+        language_instruction = get_language_instruction(language)
 
-        prompt = f"""Create a learning roadmap structure for:
+        prompt = f"""{language_instruction}Create a learning roadmap structure for:
 
 Topic: {interview_context.topic}
 
@@ -110,6 +112,7 @@ Also provide:
         session_index: int,
         all_session_titles: list[str],
         topic: str,
+        language: str = "en",
     ) -> SessionDetailResponse:
         """Phase 2: Get detailed info for a single session.
 
@@ -119,10 +122,12 @@ Also provide:
             session_index: 0-based index of this session
             all_session_titles: List of all session titles for context
             topic: Main learning topic
+            language: Language code ("en" or "he")
         """
         sessions_context = "\n".join(f"{i}. {title}" for i, title in enumerate(all_session_titles))
+        language_instruction = get_language_instruction(language)
 
-        prompt = f"""For this learning session, provide:
+        prompt = f"""{language_instruction}For this learning session, provide:
 
 Session: {session_title}
 Type: {session_type}
@@ -146,6 +151,7 @@ Provide:
     async def create_outline(
         self,
         interview_context: InterviewContext,
+        language: str = "en",
     ) -> tuple[str, SessionOutline]:
         """Create a session outline based on interview context.
 
@@ -157,7 +163,7 @@ Provide:
             A tuple of (suggested_title, session_outline)
         """
         # Phase 1: Get structure quickly
-        phase1 = await self.create_outline_phase1(interview_context)
+        phase1 = await self.create_outline_phase1(interview_context, language)
 
         # Phase 2: Get details for each session in parallel
         all_titles = [s.title for s in phase1.sessions]
@@ -169,6 +175,7 @@ Provide:
                 session_index=idx,
                 all_session_titles=all_titles,
                 topic=interview_context.topic,
+                language=language,
             )
 
         tasks = [get_details(i, s) for i, s in enumerate(phase1.sessions)]

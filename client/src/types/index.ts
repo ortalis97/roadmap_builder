@@ -39,10 +39,13 @@ export interface RoadmapProgress {
   percentage: number;
 }
 
+export type Language = 'en' | 'he';
+
 export interface RoadmapListItem {
   id: string;
   title: string;
   session_count: number;
+  language: Language;
   created_at: string;
 }
 
@@ -51,6 +54,7 @@ export interface Roadmap {
   title: string;
   summary: string | null;
   sessions: SessionSummary[];
+  language: Language;
   created_at: string;
   updated_at: string;
 }

@@ -27,6 +27,17 @@ Examples:
 
 **Only mark a feature complete when it's fully validated and working.**
 
+## Important: Ask Clarifying Questions One by One
+
+**When gathering requirements or clarifying ambiguities before implementation:**
+
+1. **DO NOT** dump all questions at once — it overwhelms and leads to incomplete answers
+2. **DO** ask questions one at a time, waiting for the user's response before the next
+3. **DO** use the previous answer to inform follow-up questions
+4. **DO** summarize collected answers before proceeding to implementation
+
+This creates a conversational flow that produces better, more thoughtful requirements.
+
 ## Tech Stack
 
 - **Backend**: Python 3.11+, FastAPI, Beanie ODM, Motor (async MongoDB)

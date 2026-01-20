@@ -159,6 +159,7 @@ class PipelineState(BaseModel):
     pipeline_id: str  # UUID for this pipeline run
     user_id: str  # User's MongoDB ObjectId as string
     topic: str  # What the user wants to learn
+    language: str = "en"  # Detected language: "en" or "he"
 
     # Current stage
     stage: PipelineStage = PipelineStage.INITIALIZED

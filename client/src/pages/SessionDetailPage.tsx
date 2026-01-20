@@ -1,18 +1,23 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useSession, useUpdateSession, useSessions } from '../hooks/useSessions';
+import { useRoadmap } from '../hooks/useRoadmaps';
 import { SessionStatusIcon, getNextStatus } from '../components/SessionStatusIcon';
 import { NotesEditor } from '../components/NotesEditor';
 import { MarkdownContent } from '../components/MarkdownContent';
 import type { SessionStatus } from '../types';
 import { useCallback, useMemo } from 'react';
+import { getLanguageDirection } from '../utils/language';
 
 export function SessionDetailPage() {
   const { roadmapId, sessionId } = useParams<{ roadmapId: string; sessionId: string }>();
   const navigate = useNavigate();
 
   const { data: session, isLoading, error } = useSession(roadmapId!, sessionId!);
+  const { data: roadmap } = useRoadmap(roadmapId!);
   const { data: allSessions } = useSessions(roadmapId!);
   const { mutate: updateSession, isPending } = useUpdateSession(roadmapId!, sessionId!);
+
+  const direction = roadmap ? getLanguageDirection(roadmap.language) : 'ltr';
 
   const { prevSession, nextSession } = useMemo(() => {
     if (!allSessions || !session) return { prevSession: null, nextSession: null };
@@ -86,7 +91,9 @@ export function SessionDetailPage() {
           <div className="flex items-start gap-4">
             <SessionStatusIcon status={session.status} onClick={handleStatusToggle} />
             <div className="flex-1">
-              <h1 className="text-2xl font-bold text-gray-900">{session.title}</h1>
+              <h1 className="text-2xl font-bold text-gray-900" dir={direction}>
+                {session.title}
+              </h1>
               <p className="mt-1 text-sm text-gray-500">
                 Session {session.order} of {allSessions?.length || '?'}
               </p>
@@ -109,7 +116,7 @@ export function SessionDetailPage() {
         </div>
 
         <div className="p-6 border-b border-gray-200">
-          <MarkdownContent content={session.content} />
+          <MarkdownContent content={session.content} direction={direction} />
         </div>
 
         <div className="p-6">

@@ -187,6 +187,7 @@ export function CreateRoadmapPage() {
               'Master React and TypeScript',
               'Understand machine learning basics',
               'Build mobile apps with Flutter',
+              'ללמוד פייתון למתחילים',
             ].map((example) => (
               <button
                 key={example}

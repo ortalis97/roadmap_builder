@@ -5,7 +5,7 @@ import uuid
 from pydantic import BaseModel, Field
 
 from app.agents.base import BaseAgent
-from app.agents.prompts import INTERVIEWER_SYSTEM_PROMPT
+from app.agents.prompts import INTERVIEWER_SYSTEM_PROMPT, get_language_instruction
 from app.agents.state import ExampleOption, InterviewQuestion
 
 
@@ -29,9 +29,12 @@ class InterviewerAgent(BaseAgent):
         raw_input: str,
         title: str,
         max_questions: int = 5,
+        language: str = "en",
     ) -> list[InterviewQuestion]:
         """Generate clarifying questions based on the learning topic."""
-        prompt = f"""Generate {max_questions} clarifying questions for a learner who wants to study:
+        language_instruction = get_language_instruction(language)
+        prompt = f"""{language_instruction}Generate {max_questions} clarifying questions \
+for a learner who wants to study:
 
 Topic/Title: {title}
 

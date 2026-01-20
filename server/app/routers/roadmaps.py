@@ -31,6 +31,7 @@ class RoadmapListItem(BaseModel):
     id: str
     title: str
     session_count: int
+    language: str = "en"
     created_at: datetime
 
     class Config:
@@ -44,6 +45,7 @@ class RoadmapResponse(BaseModel):
     title: str
     summary: str | None
     sessions: list[SessionSummaryResponse]
+    language: str = "en"
     created_at: datetime
     updated_at: datetime
 
@@ -113,6 +115,7 @@ async def list_roadmaps(
             id=str(roadmap.id),
             title=roadmap.title,
             session_count=len(roadmap.sessions),
+            language=roadmap.language,
             created_at=roadmap.created_at,
         )
         for roadmap in roadmaps
@@ -163,6 +166,7 @@ async def get_roadmap(
             )
             for session in roadmap.sessions
         ],
+        language=roadmap.language,
         created_at=roadmap.created_at,
         updated_at=roadmap.updated_at,
     )

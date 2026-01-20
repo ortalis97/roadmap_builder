@@ -4,6 +4,7 @@ import { useRoadmap, useDeleteRoadmap } from '../hooks/useRoadmaps';
 import { useSessions, useRoadmapProgress, useUpdateSessionStatus } from '../hooks/useSessions';
 import { SessionStatusIcon, getNextStatus } from '../components/SessionStatusIcon';
 import { ProgressBar } from '../components/ProgressBar';
+import { getLanguageDirection } from '../utils/language';
 
 export function RoadmapDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -50,6 +51,8 @@ export function RoadmapDetailPage() {
     );
   }
 
+  const direction = getLanguageDirection(roadmap.language);
+
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-6">
@@ -78,7 +81,7 @@ export function RoadmapDetailPage() {
         <div className="p-6 border-b border-gray-200">
           <div className="flex justify-between items-start">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-gray-900" dir={direction}>
                 {roadmap.title}
               </h1>
               <p className="mt-1 text-sm text-gray-500">
@@ -94,7 +97,9 @@ export function RoadmapDetailPage() {
           </div>
 
           {roadmap.summary && (
-            <p className="mt-4 text-gray-600">{roadmap.summary}</p>
+            <p className="mt-4 text-gray-600" dir={direction}>
+              {roadmap.summary}
+            </p>
           )}
         </div>
 
@@ -139,7 +144,7 @@ export function RoadmapDetailPage() {
                       <span className="text-sm text-gray-500 mr-2">
                         #{session.order}
                       </span>
-                      <span className="font-medium hover:text-blue-600">
+                      <span className="font-medium hover:text-blue-600" dir={direction}>
                         {session.title}
                       </span>
                     </Link>
