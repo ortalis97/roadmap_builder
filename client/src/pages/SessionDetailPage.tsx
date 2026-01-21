@@ -4,6 +4,7 @@ import { useRoadmap } from '../hooks/useRoadmaps';
 import { SessionStatusIcon, getNextStatus } from '../components/SessionStatusIcon';
 import { NotesEditor } from '../components/NotesEditor';
 import { MarkdownContent } from '../components/MarkdownContent';
+import { VideoSection } from '../components/VideoSection';
 import type { SessionStatus } from '../types';
 import { useCallback, useMemo } from 'react';
 import { getLanguageDirection } from '../utils/language';
@@ -118,6 +119,12 @@ export function SessionDetailPage() {
         <div className="p-6 border-b border-gray-200">
           <MarkdownContent content={session.content} direction={direction} />
         </div>
+
+        {session.videos && session.videos.length > 0 && (
+          <div className="p-6 border-b border-gray-200">
+            <VideoSection videos={session.videos} />
+          </div>
+        )}
 
         <div className="p-6">
           <NotesEditor

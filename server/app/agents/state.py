@@ -1,5 +1,7 @@
 """Pydantic state models for multi-agent roadmap creation pipeline."""
 
+from __future__ import annotations
+
 from datetime import datetime
 from enum import Enum
 from typing import Literal
@@ -99,6 +101,18 @@ class ResearchedSession(BaseModel):
     key_concepts: list[str] = Field(default_factory=list)
     resources: list[str] = Field(default_factory=list)  # URLs, book references
     exercises: list[str] = Field(default_factory=list)  # Optional practice items
+    videos: list[VideoResource] = Field(default_factory=list)  # YouTube video recommendations
+
+
+class VideoResource(BaseModel):
+    """YouTube video resource for a learning session."""
+
+    url: str = Field(description="Full YouTube video URL")
+    title: str = Field(description="Video title")
+    channel: str = Field(description="YouTube channel name")
+    thumbnail_url: str = Field(description="Video thumbnail image URL")
+    duration_minutes: int | None = Field(default=None, description="Video duration in minutes")
+    description: str | None = Field(default=None, description="Brief description of video content")
 
 
 # ============= Validation Models =============

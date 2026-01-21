@@ -13,6 +13,15 @@ export interface SessionSummaryWithStatus {
   status: SessionStatus;
 }
 
+export interface VideoResource {
+  url: string;
+  title: string;
+  channel: string;
+  thumbnail_url: string;
+  duration_minutes: number | null;
+  description: string | null;
+}
+
 export interface Session {
   id: string;
   roadmap_id: string;
@@ -21,6 +30,7 @@ export interface Session {
   content: string;
   status: SessionStatus;
   notes: string;
+  videos: VideoResource[];
   created_at: string;
   updated_at: string;
 }

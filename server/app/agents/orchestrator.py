@@ -23,6 +23,7 @@ from app.agents.state import (
     ValidationResult,
 )
 from app.agents.validator import ValidatorAgent
+from app.agents.youtube import YouTubeAgent
 from app.models.agent_trace import AgentSpan, AgentTrace
 from app.models.roadmap import Roadmap, SessionSummary
 from app.models.session import Session
@@ -177,6 +178,16 @@ class PipelineOrchestrator:
                         "session_title": session.title,
                     },
                 )
+
+            # Run YouTube agent to find videos
+            yield SSEEvent(
+                event="stage_update",
+                data={
+                    "stage": "finding_videos",
+                    "message": "Finding educational videos...",
+                },
+            )
+            await self._run_youtube_agent(researched_sessions)
 
             # Run validator
             yield SSEEvent(
@@ -334,6 +345,47 @@ class PipelineOrchestrator:
         self.logger.info("All sessions researched", count=len(researched_sessions))
         return researched_sessions
 
+    async def _run_youtube_agent(
+        self,
+        researched_sessions: list[ResearchedSession],
+    ) -> list[ResearchedSession]:
+        """Run the YouTube agent to find videos for all sessions.
+
+        Videos are added in-place to each ResearchedSession.
+        On failure, sessions proceed without videos (graceful degradation).
+        """
+        youtube_agent = YouTubeAgent(self.client)
+
+        for session in researched_sessions:
+            span = youtube_agent.create_span(f"find_videos_{session.order}")
+
+            try:
+                videos = await youtube_agent.find_videos(session, max_videos=3)
+                session.videos = videos
+
+                youtube_agent.complete_span(
+                    span,
+                    status="success" if videos else "no_results",
+                    output_summary=f"Found {len(videos)} videos",
+                )
+
+            except Exception as e:
+                youtube_agent.complete_span(span, error=e)
+                session.videos = []  # Proceed without videos
+
+            self.trace.spans.append(span)
+
+        await self.trace.save()
+
+        found_count = sum(len(s.videos) for s in researched_sessions)
+        self.logger.info(
+            "YouTube agent complete",
+            total_videos=found_count,
+            sessions_with_videos=sum(1 for s in researched_sessions if s.videos),
+        )
+
+        return researched_sessions
+
     async def _run_validator(
         self,
         outline: SessionOutline,
@@ -402,6 +454,7 @@ class PipelineOrchestrator:
                 order=rs.order,
                 title=rs.title,
                 content=rs.content,
+                videos=rs.videos,
             )
             await session.insert()
 

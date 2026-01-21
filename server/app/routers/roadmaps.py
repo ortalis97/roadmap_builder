@@ -5,7 +5,7 @@ from datetime import datetime
 import structlog
 from beanie import PydanticObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.middleware.auth import get_current_user
 from app.models.roadmap import Roadmap
@@ -53,6 +53,17 @@ class RoadmapResponse(BaseModel):
         from_attributes = True
 
 
+class VideoResourceResponse(BaseModel):
+    """Schema for video resource in responses."""
+
+    url: str
+    title: str
+    channel: str
+    thumbnail_url: str
+    duration_minutes: int | None
+    description: str | None
+
+
 class SessionResponse(BaseModel):
     """Schema for full session response."""
 
@@ -63,6 +74,7 @@ class SessionResponse(BaseModel):
     content: str
     status: str
     notes: str
+    videos: list[VideoResourceResponse] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
 
@@ -280,6 +292,17 @@ async def get_session(
         content=session.content,
         status=session.status,
         notes=session.notes,
+        videos=[
+            VideoResourceResponse(
+                url=v.url,
+                title=v.title,
+                channel=v.channel,
+                thumbnail_url=v.thumbnail_url,
+                duration_minutes=v.duration_minutes,
+                description=v.description,
+            )
+            for v in session.videos
+        ],
         created_at=session.created_at,
         updated_at=session.updated_at,
     )
@@ -345,6 +368,17 @@ async def update_session(
         content=session.content,
         status=session.status,
         notes=session.notes,
+        videos=[
+            VideoResourceResponse(
+                url=v.url,
+                title=v.title,
+                channel=v.channel,
+                thumbnail_url=v.thumbnail_url,
+                duration_minutes=v.duration_minutes,
+                description=v.description,
+            )
+            for v in session.videos
+        ],
         created_at=session.created_at,
         updated_at=session.updated_at,
     )

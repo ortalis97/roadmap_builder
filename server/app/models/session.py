@@ -6,6 +6,8 @@ from typing import Literal
 from beanie import Document, Indexed, PydanticObjectId
 from pydantic import Field
 
+from app.agents.state import VideoResource
+
 
 def utc_now() -> datetime:
     """Return current UTC time as timezone-aware datetime."""
@@ -28,6 +30,9 @@ class Session(Document):
     content: str
     status: SessionStatus = "not_started"
     notes: str = ""
+    videos: list[VideoResource] = Field(default_factory=list)
+    video_retry_count: int = Field(default=0)
+    video_retry_pending: bool = Field(default=False)
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(default_factory=utc_now)
 
