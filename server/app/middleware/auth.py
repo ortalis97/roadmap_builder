@@ -1,5 +1,7 @@
 """Firebase authentication middleware and dependencies."""
 
+import json
+
 import firebase_admin
 import structlog
 from fastapi import Depends, HTTPException, status
@@ -19,6 +21,10 @@ def init_firebase() -> None:
     """Initialize Firebase Admin SDK.
 
     Call this once during application startup.
+    Supports two methods for providing credentials:
+    1. GOOGLE_APPLICATION_CREDENTIALS - path to service account JSON file
+    2. GOOGLE_APPLICATION_CREDENTIALS_JSON - service account JSON as string
+
     Skips initialization if credentials not configured.
     """
     global _firebase_app
@@ -28,17 +34,33 @@ def init_firebase() -> None:
 
     settings = get_settings()
 
-    if not settings.google_application_credentials:
-        logger.warning("Firebase credentials not configured, auth will be disabled")
-        return
+    # Try JSON string first (preferred for cloud deployment)
+    if settings.google_application_credentials_json:
+        try:
+            cred_dict = json.loads(settings.google_application_credentials_json)
+            cred = credentials.Certificate(cred_dict)
+            _firebase_app = firebase_admin.initialize_app(cred)
+            logger.info("Firebase Admin SDK initialized from JSON credentials")
+            return
+        except json.JSONDecodeError as e:
+            logger.error("Invalid JSON in GOOGLE_APPLICATION_CREDENTIALS_JSON", error=str(e))
+            raise
+        except Exception as e:
+            logger.error("Failed to initialize Firebase from JSON", error=str(e))
+            raise
 
-    try:
-        cred = credentials.Certificate(settings.google_application_credentials)
-        _firebase_app = firebase_admin.initialize_app(cred)
-        logger.info("Firebase Admin SDK initialized")
-    except Exception as e:
-        logger.error("Failed to initialize Firebase", error=str(e))
-        raise
+    # Fall back to file path
+    if settings.google_application_credentials:
+        try:
+            cred = credentials.Certificate(settings.google_application_credentials)
+            _firebase_app = firebase_admin.initialize_app(cred)
+            logger.info("Firebase Admin SDK initialized from file")
+            return
+        except Exception as e:
+            logger.error("Failed to initialize Firebase from file", error=str(e))
+            raise
+
+    logger.warning("Firebase credentials not configured, auth will be disabled")
 
 
 def is_firebase_initialized() -> bool:

@@ -13,9 +13,14 @@ class Settings(BaseSettings):
     environment: str = "development"
     cors_origins: list[str] = ["http://localhost:5173"]
 
-    # Placeholders for future phases
+    # Database
     mongodb_uri: str = ""
-    google_application_credentials: str = ""
+
+    # Firebase Auth - supports either file path or JSON string
+    google_application_credentials: str = ""  # Path to service account JSON file
+    google_application_credentials_json: str = ""  # Service account JSON as string
+
+    # AI
     gemini_api_key: str = ""
 
     model_config = SettingsConfigDict(
