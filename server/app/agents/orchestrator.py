@@ -349,14 +349,16 @@ class PipelineOrchestrator:
         self,
         researched_sessions: list[ResearchedSession],
     ) -> list[ResearchedSession]:
-        """Run the YouTube agent to find videos for all sessions.
+        """Run the YouTube agent to find videos for all sessions in parallel.
 
         Videos are added in-place to each ResearchedSession.
         On failure, sessions proceed without videos (graceful degradation).
         """
         youtube_agent = YouTubeAgent(self.client)
+        spans: list[AgentSpan] = []
 
-        for session in researched_sessions:
+        async def find_videos_for_session(session: ResearchedSession) -> None:
+            """Find videos for a single session."""
             span = youtube_agent.create_span(f"find_videos_{session.order}")
 
             try:
@@ -373,8 +375,15 @@ class PipelineOrchestrator:
                 youtube_agent.complete_span(span, error=e)
                 session.videos = []  # Proceed without videos
 
-            self.trace.spans.append(span)
+            spans.append(span)
 
+        # Run all YouTube searches in parallel
+        await asyncio.gather(
+            *[find_videos_for_session(session) for session in researched_sessions],
+            return_exceptions=True,
+        )
+
+        self.trace.spans.extend(spans)
         await self.trace.save()
 
         found_count = sum(len(s.videos) for s in researched_sessions)
