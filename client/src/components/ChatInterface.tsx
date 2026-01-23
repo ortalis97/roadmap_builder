@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useChat } from '../hooks/useChat';
 import { ChatMessage } from './ChatMessage';
+import { useIsMobile } from '../hooks/useMediaQuery';
 
 interface ChatInterfaceProps {
   roadmapId: string;
@@ -11,6 +12,7 @@ export function ChatInterface({ roadmapId, sessionId }: ChatInterfaceProps) {
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const isMobile = useIsMobile();
 
   const {
     messages,
@@ -50,7 +52,7 @@ export function ChatInterface({ roadmapId, sessionId }: ChatInterfaceProps) {
           <button
             onClick={() => clearHistory()}
             disabled={isClearing}
-            className="text-sm text-gray-500 hover:text-red-600 disabled:opacity-50"
+            className="text-sm text-gray-500 hover:text-red-600 disabled:opacity-50 py-2 min-h-[44px] md:min-h-0 md:py-0"
           >
             {isClearing ? 'Clearing...' : 'Clear Chat'}
           </button>
@@ -122,20 +124,20 @@ export function ChatInterface({ roadmapId, sessionId }: ChatInterfaceProps) {
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask a question about this session..."
-            rows={1}
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm resize-none"
+            rows={isMobile ? 2 : 1}
+            className="flex-1 px-3 py-3 md:py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm resize-none"
             disabled={isSending}
           />
           <button
             type="submit"
             disabled={isSending || !inputValue.trim()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-4 py-3 md:py-2 min-h-[44px] md:min-h-0 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {isSending ? (
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
             ) : (
               <svg
-                className="w-4 h-4"
+                className="w-5 h-5 md:w-4 md:h-4"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -148,12 +150,15 @@ export function ChatInterface({ roadmapId, sessionId }: ChatInterfaceProps) {
                 />
               </svg>
             )}
-            Send
+            <span className="hidden md:inline">Send</span>
           </button>
         </div>
-        <p className="text-xs text-gray-400 mt-2">
-          Press Enter to send, Shift+Enter for new line
-        </p>
+        {/* Hide keyboard shortcut hint on mobile */}
+        {!isMobile && (
+          <p className="text-xs text-gray-400 mt-2">
+            Press Enter to send, Shift+Enter for new line
+          </p>
+        )}
       </form>
     </div>
   );

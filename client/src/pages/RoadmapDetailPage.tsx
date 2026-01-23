@@ -58,10 +58,10 @@ export function RoadmapDetailPage() {
       <div className="mb-6">
         <Link
           to="/"
-          className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
+          className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1 py-2 min-h-[44px] md:min-h-0 md:py-0"
         >
           <svg
-            className="w-4 h-4"
+            className="w-5 h-5 md:w-4 md:h-4"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -90,7 +90,7 @@ export function RoadmapDetailPage() {
             </div>
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              className="text-red-600 hover:text-red-800 text-sm"
+              className="text-red-600 hover:text-red-800 text-sm py-2 px-3 min-h-[44px] md:min-h-0 md:py-0 md:px-0"
             >
               Delete
             </button>
@@ -126,7 +126,7 @@ export function RoadmapDetailPage() {
                   <div
                     key={session.id}
                     dir={direction}
-                    className="flex items-center gap-3 p-4 border border-gray-200 rounded-md hover:border-gray-300 transition-colors"
+                    className="flex items-center gap-3 p-4 min-h-[56px] md:min-h-0 border border-gray-200 rounded-md hover:border-gray-300 transition-colors"
                   >
                     <SessionStatusIcon
                       status={session.status}
@@ -140,7 +140,7 @@ export function RoadmapDetailPage() {
                     />
                     <Link
                       to={`/roadmaps/${id}/sessions/${session.id}`}
-                      className="flex-1 flex items-center gap-2"
+                      className="flex-1 flex items-center gap-2 py-2 md:py-0"
                     >
                       <span className="text-sm text-gray-500">
                         #{session.order}
@@ -175,7 +175,7 @@ export function RoadmapDetailPage() {
             <div className="mt-4 flex gap-3 justify-end">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md"
+                className="px-4 py-3 md:py-2 min-h-[44px] md:min-h-0 text-gray-700 hover:bg-gray-100 rounded-md"
                 disabled={isDeleting}
               >
                 Cancel
@@ -183,7 +183,7 @@ export function RoadmapDetailPage() {
               <button
                 onClick={handleDelete}
                 disabled={isDeleting}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
+                className="px-4 py-3 md:py-2 min-h-[44px] md:min-h-0 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
               >
                 {isDeleting ? 'Deleting...' : 'Delete'}
               </button>

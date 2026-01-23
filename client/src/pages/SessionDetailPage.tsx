@@ -78,9 +78,9 @@ export function SessionDetailPage() {
       <div className="mb-6">
         <Link
           to={`/roadmaps/${roadmapId}`}
-          className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
+          className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1 py-2 min-h-[44px] md:min-h-0 md:py-0"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
           Back to Roadmap
@@ -106,7 +106,7 @@ export function SessionDetailPage() {
             <select
               value={session.status}
               onChange={(e) => handleStatusChange(e.target.value as SessionStatus)}
-              className="text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              className="text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 py-2 min-h-[44px] md:min-h-0 md:py-1"
             >
               <option value="not_started">Not Started</option>
               <option value="in_progress">In Progress</option>
@@ -139,12 +139,12 @@ export function SessionDetailPage() {
         {prevSession ? (
           <button
             onClick={() => navigate(`/roadmaps/${roadmapId}/sessions/${prevSession.id}`)}
-            className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md"
+            className="flex items-center gap-2 px-4 py-3 md:py-2 min-h-[44px] md:min-h-0 text-gray-700 hover:bg-gray-100 rounded-md"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            <span className="text-sm">{prevSession.title}</span>
+            <span className="text-sm md:text-sm">{prevSession.title}</span>
           </button>
         ) : (
           <div />
@@ -153,10 +153,10 @@ export function SessionDetailPage() {
         {nextSession ? (
           <button
             onClick={() => navigate(`/roadmaps/${roadmapId}/sessions/${nextSession.id}`)}
-            className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md"
+            className="flex items-center gap-2 px-4 py-3 md:py-2 min-h-[44px] md:min-h-0 text-gray-700 hover:bg-gray-100 rounded-md"
           >
-            <span className="text-sm">{nextSession.title}</span>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <span className="text-sm md:text-sm">{nextSession.title}</span>
+            <svg className="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>

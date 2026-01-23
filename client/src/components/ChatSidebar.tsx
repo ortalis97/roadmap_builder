@@ -4,8 +4,9 @@ interface ChatSidebarProps {
   onToggle: () => void;
   roadmapId: string;
   sessionId?: string;
-  width: number;
+  width?: number;
   onWidthChange: (width: number) => void;
+  isMobileFullscreen?: boolean;
 }
 
 const MIN_WIDTH = 280;
@@ -17,11 +18,13 @@ export function ChatSidebar({
   sessionId,
   width,
   onWidthChange,
+  isMobileFullscreen = false,
 }: ChatSidebarProps) {
   const handleMouseDown = (e: React.MouseEvent) => {
+    if (isMobileFullscreen) return;
     e.preventDefault();
     const startX = e.clientX;
-    const startWidth = width;
+    const startWidth = width || MIN_WIDTH;
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const delta = startX - moveEvent.clientX;
@@ -38,6 +41,44 @@ export function ChatSidebar({
     document.addEventListener('mouseup', handleMouseUp);
   };
 
+  // Mobile fullscreen mode - no fixed width, no resize handle, no header (parent provides it)
+  if (isMobileFullscreen) {
+    return (
+      <div className="h-full w-full bg-white flex flex-col">
+        {/* Sidebar content */}
+        <div className="flex-1 overflow-hidden">
+          {sessionId ? (
+            <ChatInterface roadmapId={roadmapId} sessionId={sessionId} />
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-gray-500 p-6 text-center">
+              <svg
+                className="w-16 h-16 mb-4 text-gray-300"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+                />
+              </svg>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Select a Session
+              </h3>
+              <p className="text-sm">
+                Go back and click on a session from the roadmap to start chatting with the
+                AI assistant about that topic.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Desktop mode - fixed width, resize handle, full header
   return (
     <div
       style={{ width: `${width}px` }}

@@ -55,7 +55,7 @@ export function DashboardPage() {
         <h1 className="text-2xl font-bold text-gray-900">My Roadmaps</h1>
         <Link
           to="/create"
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="px-4 py-3 md:py-2 min-h-[44px] md:min-h-0 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
         >
           Create New Roadmap
         </Link>
@@ -69,7 +69,7 @@ export function DashboardPage() {
           </p>
           <Link
             to="/create"
-            className="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            className="mt-4 inline-block px-4 py-3 md:py-2 min-h-[44px] md:min-h-0 bg-blue-600 text-white rounded-md hover:bg-blue-700"
           >
             Create Roadmap
           </Link>

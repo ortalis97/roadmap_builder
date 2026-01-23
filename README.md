@@ -59,11 +59,18 @@ See [PRD.md](PRD.md) for the complete product vision, user stories, and detailed
 - Chat history persistence
 - Real-time AI responses with context awareness
 
+**Phase 6: Mobile Support**
+- Responsive design optimized for phones (320px - 428px viewports)
+- Mobile navigation with hamburger menu and slide-out drawer
+- Chat sidebar converts to full-screen drawer with FAB trigger on mobile
+- Touch-friendly UI with 44px minimum touch targets
+- Responsive form layouts (separate input/button on mobile)
+- Mobile-optimized chat interface with larger text areas
+
 ### Planned
 
 **High Priority:**
 - **Better YouTube video grounding** - Current Gemini-based search returns non-existing videos frequently. Integrate Tavily API or similar search tool for reliable video discovery with URL verification.
-- **Mobile support (iOS/Android)** - Responsive design optimizations for phone screens. Ensure touch-friendly interactions, proper viewport handling, and mobile navigation patterns.
 - **Improved Hebrew RTL support** - Interview question option buttons don't align correctly for Hebrew text. Apply RTL layout detection to interview components similar to session list fix.
 
 **Future:**
@@ -122,12 +129,13 @@ roadmap_builder/
 │   ├── src/
 │   │   ├── components/         # Reusable UI components
 │   │   │   ├── creation/       # Roadmap creation components
-│   │   │   └── layout/         # Layout components
+│   │   │   └── layout/         # Layout, MobileNav, ProtectedRoute
 │   │   ├── context/            # React context (AuthContext)
-│   │   ├── hooks/              # Custom hooks
+│   │   ├── hooks/              # Custom hooks (useMediaQuery, useSessions, etc.)
 │   │   ├── pages/              # Route pages
 │   │   ├── services/           # API client, Firebase, SSE
-│   │   └── types/              # TypeScript types
+│   │   ├── types/              # TypeScript types
+│   │   └── utils/              # Utility functions (language detection)
 │   ├── package.json
 │   └── .env                    # Firebase config (not committed)
 ├── PRD.md                      # Product requirements document
