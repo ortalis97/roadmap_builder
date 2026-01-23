@@ -61,8 +61,12 @@ See [PRD.md](PRD.md) for the complete product vision, user stories, and detailed
 
 ### Planned
 
+**High Priority:**
+- **Better YouTube video grounding** - Current Gemini-based search returns non-existing videos frequently. Integrate Tavily API or similar search tool for reliable video discovery with URL verification.
+- **Mobile support (iOS/Android)** - Responsive design optimizations for phone screens. Ensure touch-friendly interactions, proper viewport handling, and mobile navigation patterns.
+
+**Future:**
 - Markdown rendering for session content (content is generated with markdown but not rendered)
-- Mobile responsive design
 - Export/import functionality
 - Sharing roadmaps
 
