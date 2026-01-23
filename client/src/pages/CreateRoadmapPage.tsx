@@ -74,7 +74,7 @@ export function CreateRoadmapPage() {
   }
 
   // Show progress during pipeline
-  if (['starting', 'architecting', 'researching', 'validating', 'saving'].includes(state.stage)) {
+  if (['starting', 'architecting', 'researching', 'finding_videos', 'validating', 'saving'].includes(state.stage)) {
     return (
       <div className="max-w-3xl mx-auto py-6">
         <CreationProgressDisplay progress={state.progress} />

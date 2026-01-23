@@ -149,6 +149,7 @@ export type CreationStage =
   | 'interviewing'
   | 'architecting'
   | 'researching'
+  | 'finding_videos'
   | 'validating'
   | 'user_review'
   | 'saving'
