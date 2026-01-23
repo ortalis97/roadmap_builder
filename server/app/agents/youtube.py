@@ -119,8 +119,13 @@ Respond with only the JSON object, no other text."""
             # Parse and validate
             data = json.loads(cleaned)
 
+            # Handle both formats: {"videos": [...]} or [...]
+            video_list = data.get("videos", []) if isinstance(data, dict) else data
+            if not isinstance(video_list, list):
+                video_list = []
+
             videos = []
-            for v in data.get("videos", [])[:max_videos]:
+            for v in video_list[:max_videos]:
                 try:
                     video = VideoResource(
                         url=v.get("url", ""),

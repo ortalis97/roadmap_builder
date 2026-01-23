@@ -367,7 +367,7 @@ class PipelineOrchestrator:
 
                 youtube_agent.complete_span(
                     span,
-                    status="success" if videos else "no_results",
+                    status="success",
                     output_summary=f"Found {len(videos)} videos",
                 )
 
