@@ -64,6 +64,7 @@ See [PRD.md](PRD.md) for the complete product vision, user stories, and detailed
 **High Priority:**
 - **Better YouTube video grounding** - Current Gemini-based search returns non-existing videos frequently. Integrate Tavily API or similar search tool for reliable video discovery with URL verification.
 - **Mobile support (iOS/Android)** - Responsive design optimizations for phone screens. Ensure touch-friendly interactions, proper viewport handling, and mobile navigation patterns.
+- **Improved Hebrew RTL support** - Interview question option buttons don't align correctly for Hebrew text. Apply RTL layout detection to interview components similar to session list fix.
 
 **Future:**
 - Markdown rendering for session content (content is generated with markdown but not rendered)
