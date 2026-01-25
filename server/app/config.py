@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     # AI
     gemini_api_key: str = ""
 
+    # YouTube Data API v3 (optional - enables reliable video search)
+    youtube_api_key: str = ""
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

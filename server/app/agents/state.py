@@ -102,6 +102,7 @@ class ResearchedSession(BaseModel):
     resources: list[str] = Field(default_factory=list)  # URLs, book references
     exercises: list[str] = Field(default_factory=list)  # Optional practice items
     videos: list[VideoResource] = Field(default_factory=list)  # YouTube video recommendations
+    language: str = "en"  # Language code for video search relevance
 
 
 class VideoResource(BaseModel):
