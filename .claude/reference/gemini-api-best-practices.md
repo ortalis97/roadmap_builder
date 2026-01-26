@@ -12,6 +12,12 @@ A concise reference guide for working with the Google Gemini API in Python appli
 4. [Structured Output](#4-structured-output)
 5. [Pydantic Integration](#5-pydantic-integration)
 6. [Common Issues](#6-common-issues)
+7. [Multimodal Input](#7-multimodal-input)
+8. [Safety Settings](#8-safety-settings)
+9. [Context Caching](#9-context-caching)
+10. [Function Calling](#10-function-calling)
+11. [Token Counting](#11-token-counting)
+12. [Embeddings](#12-embeddings)
 
 ---
 
@@ -309,6 +315,165 @@ Example format:
     "content": "## Introduction\\n..."
 }
 """
+```
+
+---
+
+## 7. Multimodal Input
+
+Gemini models are multimodal by default (except for text-embedding models). You can pass images, audio, and video directly.
+
+### Image Input
+
+```python
+from PIL import Image
+import requests
+from io import BytesIO
+
+# Load image
+url = "https://storage.googleapis.com/generativeai-downloads/images/scones.jpg"
+image = Image.open(BytesIO(requests.get(url).content))
+
+response = client.models.generate_content(
+    model="gemini-2.5-flash-lite",
+    contents=["Describe this image", image]
+)
+print(response.text)
+```
+
+### Audio Input (File API)
+
+For larger audio/video files, use the File API (see below) or pass raw bytes if small enough.
+
+---
+
+## 8. Safety Settings
+
+Control content filtering using `safety_settings`.
+
+### Configuration
+
+```python
+from google.genai import types
+
+response = client.models.generate_content(
+    model="gemini-2.5-flash-lite",
+    contents="Tell me a scary story",
+    config=types.GenerateContentConfig(
+        safety_settings=[
+            types.SafetySetting(
+                category="HARM_CATEGORY_DANGEROUS_CONTENT",
+                threshold="BLOCK_ONLY_HIGH"
+            ),
+             types.SafetySetting(
+                category="HARM_CATEGORY_HATE_SPEECH",
+                threshold="BLOCK_MEDIUM_AND_ABOVE"
+            )
+        ]
+    )
+)
+```
+
+To disable safety filters (use with caution):
+```python
+threshold="BLOCK_NONE"
+```
+
+---
+
+## 9. Context Caching
+
+Reduce costs and latency for repeated large contexts (e.g., long documents, codebases).
+
+### Creating a Cache
+
+```python
+from google.genai import types
+import datetime
+
+# content to cache
+big_document = "..." * 10000
+
+cache = client.caches.create(
+    model="gemini-1.5-flash-002", # Only specific models support caching
+    config=types.CreateCachedContentConfig(
+        display_name="my_cache",
+        system_instruction="You are an expert on this document.",
+        contents=[big_document],
+        ttl="3600s" # 1 hour
+    )
+)
+
+print(f"Cache created: {cache.name}")
+```
+
+### Using the Cache
+
+```python
+response = client.models.generate_content(
+    model="gemini-1.5-flash-002",
+    contents="Summarize the document",
+    config=types.GenerateContentConfig(
+        cached_content=cache.name
+    )
+)
+```
+
+**Note**: Check pricing and model text for context caching availability.
+
+---
+
+## 10. Function Calling
+
+Give the model access to tools.
+
+### Automatic Execution
+
+```python
+def get_weather(location: str):
+    """Get the weather for a location."""
+    return {"location": location, "temperature": "20C", "condition": "Sunny"}
+
+response = client.models.generate_content(
+    model="gemini-2.5-flash-lite",
+    contents="What is the weather in London?",
+    config=types.GenerateContentConfig(
+        tools=[get_weather]
+    )
+)
+
+# The SDK automatically calls the function and sends the result back
+print(response.text)
+```
+
+**System Instructions**: Always provide docstrings for your functions. They are used as the tool description.
+
+---
+
+## 11. Token Counting
+
+Count tokens to estimate costs or check limits.
+
+```python
+response = client.models.count_tokens(
+    model="gemini-2.5-flash-lite",
+    contents="How many tokens is this sentence?"
+)
+print(f"Tokens: {response.total_tokens}")
+```
+
+---
+
+## 12. Embeddings
+
+Generate vector embeddings for text.
+
+```python
+response = client.models.embed_content(
+    model="text-embedding-004",
+    contents="Hello world",
+)
+print(response.embeddings[0].values)
 ```
 
 ---

@@ -79,6 +79,11 @@ See [PRD.md](PRD.md) for the complete product vision, user stories, and detailed
 - Export/import functionality
 - Sharing roadmaps
 
+### Known Bugs
+
+- **Session content sometimes truncated** — Gemini occasionally stops generating mid-content, resulting in incomplete session text (e.g., "like saying" with no continuation). Likely caused by model token limits or premature stop conditions.
+- **"Fix Roadmap" post-validation doesn't work** — After validator identifies issues, clicking "Fix Roadmap" does not trigger corrections. The fix pipeline is not implemented.
+
 ## Tech Stack
 
 | Layer | Technology |
