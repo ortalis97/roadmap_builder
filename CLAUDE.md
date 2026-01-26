@@ -11,6 +11,21 @@ A focused tool for self-directed learners to turn messy learning plans into clea
 
 This ensures the documentation stays in sync with the actual codebase.
 
+## Documentation Maintenance
+
+**Keep learnings and best practices organized:**
+
+1. **Implementation learnings** should go in `.claude/reference/` files, NOT inline in CLAUDE.md
+   - General patterns reusable across projects → dedicated reference file
+   - Project-specific quirks → can stay in CLAUDE.md briefly, then move to reference
+2. **CLAUDE.md should focus on** project-specific instructions: structure, commands, conventions
+3. **Reference files** should be self-contained guides that work independently
+
+When you discover a reusable pattern or workaround:
+1. Create or update the appropriate `.claude/reference/*.md` file
+2. Add the file to the Reference Documentation table below
+3. Keep CLAUDE.md lean and focused on this project
+
 ## Important: Ask for Required Information
 
 **When implementing features that require external configuration or credentials:**
@@ -192,7 +207,11 @@ Use Playwright MCP for:
 |----------|--------------|
 | `README.md` | Current implementation status, quick start guide |
 | `PRD.md` | Understanding requirements, features, user stories, API spec |
-| `.claude/reference/` | Best practices for FastAPI, React, testing |
+| `.claude/reference/fastapi-best-practices.md` | FastAPI patterns, Pydantic, async, testing |
+| `.claude/reference/react-frontend-best-practices.md` | React, TypeScript, Tailwind, TanStack Query |
+| `.claude/reference/gemini-api-best-practices.md` | Gemini SDK, structured output, Pydantic integration |
+| `.claude/reference/bun-package-manager.md` | Bun commands, Playwright setup (npm restricted) |
+| `.claude/reference/testing-and-logging.md` | pytest, Vitest, logging patterns |
 
 ## Code Conventions
 
@@ -293,71 +312,9 @@ client/src/
 
 ## Implementation Learnings
 
-**Document learnings here when approaches don't work as expected during development.**
-
-### Google Gemini SDK (January 2025)
-
-- **Package name changed**: The `google-generativeai` package is deprecated. Use `google-genai` instead.
-  - Old: `pip install google-generativeai` → `import google.generativeai as genai`
-  - New: `pip install google-genai` → `from google import genai`
-- **Client initialization**: Use `genai.Client(api_key=...)` instead of `genai.configure(api_key=...)`
-- **Model usage**: Use `client.models.generate_content(model="gemini-2.5-flash-lite", ...)` pattern
-- **Async handling**: The SDK's `generate_content` is synchronous; wrap in `asyncio.run_in_executor()` for async FastAPI endpoints
-- **JSON output**: Request JSON-only output in the prompt and clean up markdown code blocks from response
-
-### Gemini Structured Output (Preferred for JSON)
-
-**Always use structured output for JSON responses** - it guarantees valid JSON and eliminates parsing errors.
-
-```python
-from google import genai
-from pydantic import BaseModel, Field
-
-class MyResponse(BaseModel):
-    name: str = Field(description="The name")
-    items: list[str] = Field(description="List of items")
-
-client = genai.Client(api_key="...")
-
-response = client.models.generate_content(
-    model="gemini-2.5-flash-lite",
-    contents="Your prompt here",
-    config={
-        "response_mime_type": "application/json",
-        "response_json_schema": MyResponse.model_json_schema(),
-    },
-)
-
-# Parse directly with Pydantic
-result = MyResponse.model_validate_json(response.text)
-```
-
-**Key points:**
-- Use `response_json_schema` (NOT `response_schema`)
-- Pass `Model.model_json_schema()` to convert Pydantic to JSON Schema
-- Parse with `Model.model_validate_json(response.text)` (simpler than json.loads)
-- Add `Field(description="...")` to Pydantic fields for better model guidance
-- **Gemini quirk**: Requires `propertyOrdering` in schema for consistent field order. Our `BaseAgent._add_property_ordering()` handles this automatically.
-
-**Docs**: https://ai.google.dev/gemini-api/docs/structured-output
-
-### npm Restrictions (Company Computer)
-
-- **npm is restricted** on this computer (company policy)
-- Use **bun** for all frontend package management instead of npm
-- For Playwright E2E testing, use bun:
-  ```bash
-  cd client && ~/.bun/bin/bun add -D @playwright/test
-  ~/.bun/bin/bunx playwright install chromium
-  ```
-- Prefer bun equivalents for all npm commands:
-  - `npm install` → `~/.bun/bin/bun install`
-  - `npx` → `~/.bun/bin/bunx`
-  - `npm run` → `~/.bun/bin/bun run`
-
-### Self-Improvement Instructions
+**For reusable patterns and best practices, see the reference files in `.claude/reference/`.**
 
 When learning approaches that don't work well during development:
-1. Document the issue and working solution in this section
-2. Include package versions and dates when relevant
-3. Add code snippets showing the correct pattern
+1. Check if there's an existing reference file for the topic
+2. Add to the appropriate `.claude/reference/*.md` file
+3. Update the Reference Documentation table above

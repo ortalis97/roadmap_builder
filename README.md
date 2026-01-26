@@ -67,14 +67,15 @@ See [PRD.md](PRD.md) for the complete product vision, user stories, and detailed
 - Responsive form layouts (separate input/button on mobile)
 - Mobile-optimized chat interface with larger text areas
 
+**Phase 7: Content Enhancements**
+- YouTube video recommendations via YouTube API with oEmbed fallback
+- Hebrew RTL support with automatic language detection and RTL layout
+- Markdown rendering for session content (MarkdownContent component)
+- Centralized LLM model configuration for all agents
+
 ### Planned
 
-**High Priority:**
-- **Better YouTube video grounding** - Current Gemini-based search returns non-existing videos frequently. Integrate Tavily API or similar search tool for reliable video discovery with URL verification.
-- **Improved Hebrew RTL support** - Interview question option buttons don't align correctly for Hebrew text. Apply RTL layout detection to interview components similar to session list fix.
-
 **Future:**
-- Markdown rendering for session content (content is generated with markdown but not rendered)
 - Export/import functionality
 - Sharing roadmaps
 
