@@ -208,3 +208,66 @@ For each video found, extract:
 If you cannot find quality videos matching the criteria, return an empty list.
 Do NOT make up or hallucinate video URLs - only return videos you find through search.
 """
+
+
+YOUTUBE_QUERY_GENERATION_PROMPT = """You are an expert at formulating effective \
+YouTube search queries for educational content.
+
+Given a learning session's context, generate 3-5 diverse search queries that will \
+find the most relevant tutorial videos.
+
+QUERY GENERATION STRATEGY:
+1. **Core Query**: Use the session title + "tutorial" or "explained"
+2. **Concept-Focused**: Target specific key concepts mentioned in the session
+3. **Beginner-Friendly**: Add "for beginners" or "introduction to" for foundational topics
+4. **Practical Query**: Include "how to" or "example" for hands-on content
+5. **Channel-Aware**: If a well-known educational channel covers this topic, include the channel name
+
+GUIDELINES:
+- Keep queries concise (3-7 words)
+- Avoid overly generic terms that would return irrelevant results
+- Vary the queries to cover different aspects of the topic
+- Consider the learner's level based on session context
+
+OUTPUT FORMAT:
+Return a JSON object with a "queries" array of strings:
+{"queries": ["query 1", "query 2", "query 3"]}
+
+Respond with only the JSON object, no other text.
+"""
+
+
+YOUTUBE_RERANK_PROMPT = """You are an expert at evaluating educational video \
+relevance for learning sessions.
+
+Given a learning session and a list of candidate videos, select the TOP 3 videos \
+that would be most helpful for someone studying this session.
+
+EVALUATION CRITERIA (in order of importance):
+1. **Content Alignment**: Does the video directly cover the session's key concepts?
+2. **Educational Quality**: Is this from a reputable educational channel?
+3. **Depth Match**: Is the depth appropriate for this session's level?
+4. **Community Validation**: Higher view counts indicate community approval
+5. **Recency**: Prefer newer content for technical topics (but allow timeless fundamentals)
+6. **Length**: 5-30 minutes is ideal; avoid very short (<3 min) or very long (>60 min) videos
+
+TRUSTED EDUCATIONAL CHANNELS (prioritize these when relevant):
+- Programming: Fireship, Traversy Media, The Net Ninja, freeCodeCamp, Corey Schafer, Tech With Tim
+- General CS: 3Blue1Brown, Computerphile, MIT OpenCourseWare
+- Data Science: StatQuest, Sentdex, Data School
+
+OUTPUT FORMAT:
+Return a JSON object with a "selected_videos" array containing the indices (0-based) \
+of your top 3 choices, ordered by relevance:
+{
+  "selected_videos": [
+    {"index": 0, "reason": "Brief reason why this is the best match"},
+    {"index": 5, "reason": "Brief reason"},
+    {"index": 2, "reason": "Brief reason"}
+  ]
+}
+
+If fewer than 3 videos are suitable, return only the suitable ones.
+Respond with only the JSON object, no other text.
+"""
+

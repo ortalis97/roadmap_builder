@@ -2,14 +2,20 @@
 
 import asyncio
 import json
+import re
 from functools import partial
 
 from google.genai import types
 from pydantic import BaseModel, Field
 
 from app.agents.base import BaseAgent
-from app.agents.prompts import YOUTUBE_AGENT_PROMPT
+from app.agents.prompts import (
+    YOUTUBE_AGENT_PROMPT,
+    YOUTUBE_QUERY_GENERATION_PROMPT,
+    YOUTUBE_RERANK_PROMPT,
+)
 from app.agents.state import ResearchedSession, VideoResource
+from app.model_config import get_model_config
 from app.services.youtube_service import (
     QuotaExhaustedError,
     YouTubeService,
@@ -22,6 +28,29 @@ class YouTubeSearchResponse(BaseModel):
     videos: list[VideoResource] = Field(default_factory=list)
 
 
+class QueryGenerationResponse(BaseModel):
+    """Response schema for query generation."""
+
+    queries: list[str] = Field(
+        description="List of 3-5 diverse YouTube search queries"
+    )
+
+
+class SelectedVideo(BaseModel):
+    """A single selected video with reason."""
+
+    index: int = Field(description="0-based index of the selected video")
+    reason: str = Field(description="Brief reason why this video was selected")
+
+
+class RerankResponse(BaseModel):
+    """Response schema for video re-ranking."""
+
+    selected_videos: list[SelectedVideo] = Field(
+        description="Top 3 selected videos ordered by relevance"
+    )
+
+
 class YouTubeAgent(BaseAgent):
     """Agent for finding YouTube video recommendations.
 
@@ -30,8 +59,7 @@ class YouTubeAgent(BaseAgent):
     """
 
     name = "youtube_agent"
-    default_temperature: float = 0.3
-    default_max_tokens: int = 4096
+    model_config_key = "youtube_query"  # Default for query generation
 
     # Class-level flag for quota state (shared across instances in same process)
     _quota_exhausted: bool = False
@@ -39,6 +67,10 @@ class YouTubeAgent(BaseAgent):
     def __init__(self, client):
         super().__init__(client)
         self.youtube_service = YouTubeService()
+        # Load configs for different operations
+        self._query_config = get_model_config("youtube_query")
+        self._rerank_config = get_model_config("youtube_rerank")
+        self._grounding_config = get_model_config("youtube_grounding")
 
     def get_system_prompt(self) -> str:
         return YOUTUBE_AGENT_PROMPT
@@ -73,41 +105,276 @@ class YouTubeAgent(BaseAgent):
         session: ResearchedSession,
         max_videos: int,
     ) -> list[VideoResource]:
-        """Find videos using YouTube Data API v3."""
-        # Build search query from session context
-        key_concepts = ", ".join(session.key_concepts[:3]) if session.key_concepts else ""
-        query = f"{session.title} tutorial {key_concepts}"
+        """Find videos using YouTube Data API v3 with candidate & re-rank pattern.
 
-        items = await self.youtube_service.search_videos(
-            query=query,
-            max_results=max_videos,
+        1. Generate multiple search queries using Gemini
+        2. Fetch candidate videos from all queries
+        3. Enrich with metadata (view count, duration)
+        4. Re-rank using Gemini to select the best matches
+        """
+        # Step 1: Generate diverse search queries
+        queries = await self._generate_search_queries(session)
+        if not queries:
+            # Fallback to simple query if generation fails
+            key_concepts = ", ".join(session.key_concepts[:3]) if session.key_concepts else ""
+            queries = [f"{session.title} tutorial {key_concepts}"]
+
+        self.logger.info(
+            "Generated search queries",
+            session_title=session.title,
+            queries=queries,
+        )
+
+        # Step 2: Fetch candidate videos from all queries
+        candidates = await self._fetch_candidate_videos(
+            queries=queries,
             language=getattr(session, "language", "en") or "en",
         )
 
-        videos = []
-        for item in items:
-            video_id = item.get("id", {}).get("videoId")
-            snippet = item.get("snippet", {})
-
-            if not video_id:
-                continue
-
-            video = VideoResource(
-                url=f"https://www.youtube.com/watch?v={video_id}",
-                title=snippet.get("title", ""),
-                channel=snippet.get("channelTitle", ""),
-                thumbnail_url=snippet.get("thumbnails", {}).get("high", {}).get("url", ""),
-                duration_minutes=None,  # Not available in search results
-                description=snippet.get("description", "")[:200],
+        if not candidates:
+            self.logger.warning(
+                "No candidate videos found",
+                session_title=session.title,
             )
-            videos.append(video)
+            return []
 
         self.logger.info(
-            "Videos found via YouTube API",
+            "Candidate videos fetched",
             session_title=session.title,
-            video_count=len(videos),
+            candidate_count=len(candidates),
         )
-        return videos
+
+        # Step 3: Re-rank and select top videos
+        selected_videos = await self._rerank_videos(
+            session=session,
+            candidates=candidates,
+            max_videos=max_videos,
+        )
+
+        self.logger.info(
+            "Videos selected via re-ranking",
+            session_title=session.title,
+            video_count=len(selected_videos),
+        )
+        return selected_videos
+
+    async def _generate_search_queries(
+        self,
+        session: ResearchedSession,
+    ) -> list[str]:
+        """Use Gemini to generate diverse search queries for the session."""
+        key_concepts_str = ", ".join(session.key_concepts[:5]) if session.key_concepts else ""
+
+        prompt = f"""Generate YouTube search queries for this learning session:
+
+SESSION TITLE: {session.title}
+
+KEY CONCEPTS: {key_concepts_str}
+
+SESSION CONTENT (first 300 chars):
+{session.content[:300]}...
+
+Generate 3-5 diverse search queries to find the best tutorial videos."""
+
+        try:
+            response = await self.generate_structured(
+                prompt=prompt,
+                response_model=QueryGenerationResponse,
+                system_prompt=YOUTUBE_QUERY_GENERATION_PROMPT,
+            )
+            return response.queries[:5]
+
+        except Exception as e:
+            self.logger.warning(
+                "Failed to generate search queries",
+                error=str(e),
+            )
+            return []
+
+    async def _fetch_candidate_videos(
+        self,
+        queries: list[str],
+        language: str,
+        max_per_query: int = 5,
+    ) -> list[dict]:
+        """Fetch candidate videos from multiple queries and enrich with metadata.
+
+        Returns a list of dicts with video info including view counts.
+        """
+        # Run all searches in parallel
+        search_tasks = [
+            self.youtube_service.search_videos(
+                query=query,
+                max_results=max_per_query,
+                language=language,
+            )
+            for query in queries
+        ]
+        search_results = await asyncio.gather(*search_tasks, return_exceptions=True)
+
+        # Collect unique video IDs
+        seen_ids = set()
+        raw_candidates = []
+
+        for result in search_results:
+            if isinstance(result, Exception):
+                if isinstance(result, QuotaExhaustedError) or "quota" in str(result).lower():
+                    raise QuotaExhaustedError("YouTube API quota exhausted")
+                if isinstance(result, ValueError):
+                     raise result
+                self.logger.warning("Search query failed", error=str(result))
+                continue
+            for item in result:
+                video_id = item.get("id", {}).get("videoId")
+                if video_id and video_id not in seen_ids:
+                    seen_ids.add(video_id)
+                    raw_candidates.append({
+                        "video_id": video_id,
+                        "snippet": item.get("snippet", {}),
+                    })
+
+        if not raw_candidates:
+            return []
+
+        # Fetch detailed metadata for all candidates
+        video_ids = [c["video_id"] for c in raw_candidates]
+        try:
+            details = await self.youtube_service.get_video_details(video_ids)
+        except QuotaExhaustedError:
+            raise
+        except Exception as e:
+            self.logger.warning("Failed to fetch video details", error=str(e))
+            details = {}
+
+        # Combine search results with details
+        candidates = []
+        for raw in raw_candidates:
+            video_id = raw["video_id"]
+            snippet = raw["snippet"]
+            detail = details.get(video_id, {})
+
+            # Parse ISO 8601 duration to minutes
+            duration_iso = detail.get("duration_iso", "")
+            duration_minutes = self._parse_iso_duration(duration_iso)
+
+            candidates.append({
+                "video_id": video_id,
+                "url": f"https://www.youtube.com/watch?v={video_id}",
+                "title": detail.get("title") or snippet.get("title", ""),
+                "channel": detail.get("channel") or snippet.get("channelTitle", ""),
+                "description": (detail.get("description") or snippet.get("description", ""))[:300],
+                "thumbnail_url": detail.get("thumbnail_url") or snippet.get("thumbnails", {}).get("high", {}).get("url", ""),
+                "view_count": detail.get("view_count", 0),
+                "published_at": detail.get("published_at", ""),
+                "duration_minutes": duration_minutes,
+            })
+
+        return candidates
+
+    def _parse_iso_duration(self, duration_iso: str) -> int | None:
+        """Parse ISO 8601 duration (PT1H2M3S) to minutes."""
+        if not duration_iso:
+            return None
+        try:
+            match = re.match(r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?", duration_iso)
+            if match:
+                hours = int(match.group(1) or 0)
+                minutes = int(match.group(2) or 0)
+                seconds = int(match.group(3) or 0)
+                return hours * 60 + minutes + (1 if seconds >= 30 else 0)
+        except Exception:
+            pass
+        return None
+
+    async def _rerank_videos(
+        self,
+        session: ResearchedSession,
+        candidates: list[dict],
+        max_videos: int,
+    ) -> list[VideoResource]:
+        """Use Gemini to re-rank candidates and select the best matches."""
+        if len(candidates) <= max_videos:
+            # No need to re-rank if we have fewer candidates than requested
+            return [
+                VideoResource(
+                    url=c["url"],
+                    title=c["title"],
+                    channel=c["channel"],
+                    thumbnail_url=c["thumbnail_url"],
+                    duration_minutes=c["duration_minutes"],
+                    description=c["description"],
+                )
+                for c in candidates
+            ]
+
+        # Format candidates for the prompt
+        key_concepts_str = ", ".join(session.key_concepts[:5]) if session.key_concepts else ""
+        candidates_text = "\n".join([
+            f"[{i}] \"{c['title']}\" by {c['channel']} "
+            f"({c['view_count']:,} views, {c['duration_minutes'] or '?'} min)\n"
+            f"    Description: {c['description'][:150]}..."
+            for i, c in enumerate(candidates)
+        ])
+
+        prompt = f"""Select the {max_videos} best videos for this learning session:
+
+SESSION TITLE: {session.title}
+
+KEY CONCEPTS TO LEARN: {key_concepts_str}
+
+CANDIDATE VIDEOS:
+{candidates_text}
+
+Select the videos that will best help a learner understand the key concepts."""
+
+        try:
+            response = await self.generate_structured(
+                prompt=prompt,
+                response_model=RerankResponse,
+                system_prompt=YOUTUBE_RERANK_PROMPT,
+            )
+
+            # Extract selected videos by index
+            result = []
+            for item in response.selected_videos[:max_videos]:
+                idx = item.index
+                if 0 <= idx < len(candidates):
+                    c = candidates[idx]
+                    result.append(VideoResource(
+                        url=c["url"],
+                        title=c["title"],
+                        channel=c["channel"],
+                        thumbnail_url=c["thumbnail_url"],
+                        duration_minutes=c["duration_minutes"],
+                        description=c["description"],
+                    ))
+
+            if result:
+                return result
+
+        except Exception as e:
+            self.logger.warning(
+                "Re-ranking failed, using top candidates by view count",
+                error=str(e),
+            )
+
+        # Fallback: return top candidates by view count
+        sorted_candidates = sorted(
+            candidates,
+            key=lambda c: c.get("view_count", 0),
+            reverse=True,
+        )
+        return [
+            VideoResource(
+                url=c["url"],
+                title=c["title"],
+                channel=c["channel"],
+                thumbnail_url=c["thumbnail_url"],
+                duration_minutes=c["duration_minutes"],
+                description=c["description"],
+            )
+            for c in sorted_candidates[:max_videos]
+        ]
 
     async def _find_videos_via_gemini_with_verification(
         self,
@@ -159,13 +426,14 @@ class YouTubeAgent(BaseAgent):
         system_prompt: str,
     ) -> str:
         """Synchronous Gemini API call with Google Search grounding enabled."""
+        config = self._grounding_config
         response = self.client.models.generate_content(
-            model="gemini-2.0-flash",
+            model=config.model.value,
             contents=prompt,
             config=types.GenerateContentConfig(
                 system_instruction=system_prompt,
-                temperature=self.default_temperature,
-                max_output_tokens=self.default_max_tokens,
+                temperature=config.temperature,
+                max_output_tokens=config.max_tokens,
                 tools=[types.Tool(google_search=types.GoogleSearch())],
             ),
         )

@@ -13,6 +13,7 @@ from google import genai
 from google.genai import types
 from pydantic import BaseModel
 
+from app.model_config import get_model_config
 from app.models.agent_trace import AgentSpan
 
 logger = structlog.get_logger()
@@ -24,12 +25,27 @@ class BaseAgent(ABC):
     """Abstract base class for all agents in the pipeline."""
 
     name: str = "base_agent"
-    default_temperature: float = 0.7
-    default_max_tokens: int = 8192
+    model_config_key: str = "researcher"  # Default, subclasses override
 
     def __init__(self, client: genai.Client):
         self.client = client
+        self._model_config = get_model_config(self.model_config_key)
         self.logger = structlog.get_logger().bind(agent=self.name)
+
+    @property
+    def model(self) -> str:
+        """Get the model name for this agent."""
+        return self._model_config.model.value
+
+    @property
+    def default_temperature(self) -> float:
+        """Get the default temperature for this agent."""
+        return self._model_config.temperature
+
+    @property
+    def default_max_tokens(self) -> int:
+        """Get the default max tokens for this agent."""
+        return self._model_config.max_tokens
 
     @abstractmethod
     def get_system_prompt(self) -> str:
@@ -44,7 +60,7 @@ class BaseAgent(ABC):
     ) -> str:
         """Synchronous Gemini API call."""
         response = self.client.models.generate_content(
-            model="gemini-2.0-flash",
+            model=self.model,
             contents=prompt,
             config=types.GenerateContentConfig(
                 system_instruction=system_prompt,
@@ -84,11 +100,11 @@ class BaseAgent(ABC):
         max_tokens: int | None = None,
     ) -> str:
         """Synchronous Gemini API call with schema-constrained output."""
-        # Add propertyOrdering for Gemini 2.0 compatibility
+        # Add propertyOrdering for Gemini compatibility
         schema_with_ordering = self._add_property_ordering(response_schema)
 
         response = self.client.models.generate_content(
-            model="gemini-2.0-flash",
+            model=self.model,
             contents=prompt,
             config={
                 "system_instruction": system_prompt,

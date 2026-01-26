@@ -10,6 +10,7 @@ from google.genai import types
 from pydantic import BaseModel, ValidationError
 
 from app.config import get_settings
+from app.model_config import get_model_config
 
 logger = structlog.get_logger()
 
@@ -118,13 +119,14 @@ def _generate_content_sync(prompt: str) -> str:
     if _client is None:
         raise RuntimeError("Gemini client not initialized")
 
+    config = get_model_config("roadmap_generation")
     response = _client.models.generate_content(
-        model="gemini-2.0-flash",
+        model=config.model.value,
         contents=prompt,
         config=types.GenerateContentConfig(
             system_instruction=SYSTEM_PROMPT,
-            temperature=0.7,
-            max_output_tokens=8192,
+            temperature=config.temperature,
+            max_output_tokens=config.max_tokens,
         ),
     )
 
@@ -258,13 +260,14 @@ def _generate_chat_response_sync(
     # Add current user message
     contents.append(types.Content(role="user", parts=[types.Part(text=user_message)]))
 
+    config = get_model_config("chat")
     response = _client.models.generate_content(
-        model="gemini-2.0-flash",
+        model=config.model.value,
         contents=contents,
         config=types.GenerateContentConfig(
             system_instruction=system_prompt,
-            temperature=0.7,
-            max_output_tokens=4096,
+            temperature=config.temperature,
+            max_output_tokens=config.max_tokens,
         ),
     )
 

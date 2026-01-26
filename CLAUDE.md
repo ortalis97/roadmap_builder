@@ -72,6 +72,7 @@ roadmap_builder/
 │   │   ├── __init__.py
 │   │   ├── main.py             # FastAPI app entry point
 │   │   ├── config.py           # Settings (Pydantic BaseSettings)
+│   │   ├── model_config.py     # LLM model assignments per agent
 │   │   ├── database.py         # MongoDB connection (Motor + Beanie)
 │   │   ├── models/             # Pydantic + Beanie models
 │   │   │   ├── __init__.py
@@ -300,7 +301,7 @@ client/src/
   - Old: `pip install google-generativeai` → `import google.generativeai as genai`
   - New: `pip install google-genai` → `from google import genai`
 - **Client initialization**: Use `genai.Client(api_key=...)` instead of `genai.configure(api_key=...)`
-- **Model usage**: Use `client.models.generate_content(model="gemini-2.0-flash", ...)` pattern
+- **Model usage**: Use `client.models.generate_content(model="gemini-2.5-flash-lite", ...)` pattern
 - **Async handling**: The SDK's `generate_content` is synchronous; wrap in `asyncio.run_in_executor()` for async FastAPI endpoints
 - **JSON output**: Request JSON-only output in the prompt and clean up markdown code blocks from response
 
@@ -319,7 +320,7 @@ class MyResponse(BaseModel):
 client = genai.Client(api_key="...")
 
 response = client.models.generate_content(
-    model="gemini-2.0-flash",
+    model="gemini-2.5-flash-lite",
     contents="Your prompt here",
     config={
         "response_mime_type": "application/json",
@@ -336,7 +337,7 @@ result = MyResponse.model_validate_json(response.text)
 - Pass `Model.model_json_schema()` to convert Pydantic to JSON Schema
 - Parse with `Model.model_validate_json(response.text)` (simpler than json.loads)
 - Add `Field(description="...")` to Pydantic fields for better model guidance
-- **Gemini 2.0 quirk**: Requires `propertyOrdering` in schema for consistent field order. Our `BaseAgent._add_property_ordering()` handles this automatically.
+- **Gemini quirk**: Requires `propertyOrdering` in schema for consistent field order. Our `BaseAgent._add_property_ordering()` handles this automatically.
 
 **Docs**: https://ai.google.dev/gemini-api/docs/structured-output
 

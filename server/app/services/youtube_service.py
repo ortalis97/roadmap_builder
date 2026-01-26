@@ -126,3 +126,83 @@ class YouTubeService:
         tasks = [self.verify_video_exists(url) for url in video_urls]
         results = await asyncio.gather(*tasks)
         return list(zip(video_urls, results, strict=True))
+
+    def _get_video_details_sync(
+        self,
+        video_ids: list[str],
+    ) -> dict[str, dict[str, Any]]:
+        """Synchronous call to get video details (statistics, contentDetails)."""
+        if not self.settings.youtube_api_key:
+            raise ValueError("YouTube API key not configured")
+
+        if not video_ids:
+            return {}
+
+        # API accepts up to 50 video IDs per request
+        params = {
+            "part": "snippet,statistics,contentDetails",
+            "id": ",".join(video_ids[:50]),
+            "key": self.settings.youtube_api_key,
+        }
+
+        with httpx.Client(timeout=10.0) as client:
+            response = client.get(f"{YOUTUBE_API_BASE}/videos", params=params)
+
+            if response.status_code == 403:
+                error_data = response.json()
+                if "quotaExceeded" in str(error_data):
+                    raise QuotaExhaustedError("YouTube API quota exhausted")
+                raise Exception(f"YouTube API error: {error_data}")
+
+            response.raise_for_status()
+            items = response.json().get("items", [])
+
+        # Build a dict keyed by video ID
+        details = {}
+        for item in items:
+            video_id = item.get("id")
+            if not video_id:
+                continue
+
+            snippet = item.get("snippet", {})
+            statistics = item.get("statistics", {})
+            content_details = item.get("contentDetails", {})
+
+            details[video_id] = {
+                "title": snippet.get("title", ""),
+                "channel": snippet.get("channelTitle", ""),
+                "description": snippet.get("description", ""),
+                "thumbnail_url": snippet.get("thumbnails", {}).get("high", {}).get("url", ""),
+                "published_at": snippet.get("publishedAt", ""),
+                "view_count": int(statistics.get("viewCount", 0)),
+                "like_count": int(statistics.get("likeCount", 0)),
+                "duration_iso": content_details.get("duration", ""),  # ISO 8601 format
+            }
+
+        return details
+
+    async def get_video_details(
+        self,
+        video_ids: list[str],
+    ) -> dict[str, dict[str, Any]]:
+        """Get detailed metadata for a list of video IDs.
+
+        Args:
+            video_ids: List of YouTube video IDs
+
+        Returns:
+            Dict mapping video_id to metadata dict containing:
+            - title, channel, description, thumbnail_url
+            - published_at (ISO timestamp)
+            - view_count, like_count (integers)
+            - duration_iso (ISO 8601 duration string)
+
+        Raises:
+            QuotaExhaustedError: When daily quota is exceeded
+        """
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            None,
+            partial(self._get_video_details_sync, video_ids),
+        )
+

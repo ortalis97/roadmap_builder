@@ -69,6 +69,7 @@ class ArchitectAgent(BaseAgent):
     """Agent that creates the session structure for a learning roadmap."""
 
     name = "architect"
+    model_config_key = "architect"
 
     def get_system_prompt(self) -> str:
         return ARCHITECT_SYSTEM_PROMPT

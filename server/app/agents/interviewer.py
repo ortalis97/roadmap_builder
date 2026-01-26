@@ -19,6 +19,7 @@ class InterviewerAgent(BaseAgent):
     """Agent that generates clarifying questions for the learner."""
 
     name = "interviewer"
+    model_config_key = "interviewer"
 
     def get_system_prompt(self) -> str:
         return INTERVIEWER_SYSTEM_PROMPT

@@ -38,6 +38,7 @@ class ValidatorAgent(BaseAgent):
     """Agent that validates the complete roadmap for quality issues."""
 
     name = "validator"
+    model_config_key = "validator"
 
     def get_system_prompt(self) -> str:
         return VALIDATOR_SYSTEM_PROMPT

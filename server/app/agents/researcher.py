@@ -34,6 +34,7 @@ class ResearcherAgent(BaseAgent):
     """Base researcher agent - subclass for specialized session types."""
 
     name = "researcher"
+    model_config_key = "researcher"
     session_type: SessionType = SessionType.CONCEPT
 
     def get_system_prompt(self) -> str:
