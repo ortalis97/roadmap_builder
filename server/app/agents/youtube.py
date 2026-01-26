@@ -67,7 +67,6 @@ class YouTubeAgent(BaseAgent):
     def __init__(self, client):
         super().__init__(client)
         self.youtube_service = YouTubeService()
-        # Load configs for different operations
         self._query_config = get_model_config("youtube_query")
         self._rerank_config = get_model_config("youtube_rerank")
         self._grounding_config = get_model_config("youtube_grounding")
@@ -177,10 +176,14 @@ SESSION CONTENT (first 300 chars):
 Generate 3-5 diverse search queries to find the best tutorial videos."""
 
         try:
+            config = self._query_config
             response = await self.generate_structured(
                 prompt=prompt,
                 response_model=QueryGenerationResponse,
                 system_prompt=YOUTUBE_QUERY_GENERATION_PROMPT,
+                model=config.model.value,
+                temperature=config.temperature,
+                max_tokens=config.max_tokens,
             )
             return response.queries[:5]
 
@@ -328,10 +331,14 @@ CANDIDATE VIDEOS:
 Select the videos that will best help a learner understand the key concepts."""
 
         try:
+            config = self._rerank_config
             response = await self.generate_structured(
                 prompt=prompt,
                 response_model=RerankResponse,
                 system_prompt=YOUTUBE_RERANK_PROMPT,
+                model=config.model.value,
+                temperature=config.temperature,
+                max_tokens=config.max_tokens,
             )
 
             # Extract selected videos by index

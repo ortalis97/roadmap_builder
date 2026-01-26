@@ -1,9 +1,8 @@
 """Tests for LLM model configuration."""
 
-import pytest
-
 from app.model_config import (
     AGENT_MODELS,
+    UNLIMITED_TOKENS,
     GeminiModel,
     ModelConfig,
     get_model_config,
@@ -21,6 +20,14 @@ class TestGeminiModel:
 
     def test_flash_2_0_value(self):
         assert GeminiModel.FLASH_2_0.value == "gemini-2.0-flash"
+
+
+class TestUnlimitedTokens:
+    """Tests for UNLIMITED_TOKENS global switch."""
+
+    def test_default_is_false(self):
+        """UNLIMITED_TOKENS should be False by default."""
+        assert UNLIMITED_TOKENS is False
 
 
 class TestModelConfig:

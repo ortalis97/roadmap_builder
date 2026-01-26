@@ -13,7 +13,7 @@ from google import genai
 from google.genai import types
 from pydantic import BaseModel
 
-from app.model_config import get_model_config
+from app.model_config import UNLIMITED_TOKENS, get_model_config
 from app.models.agent_trace import AgentSpan
 
 logger = structlog.get_logger()
@@ -57,17 +57,32 @@ class BaseAgent(ABC):
         system_prompt: str,
         temperature: float | None = None,
         max_tokens: int | None = None,
+        model: str | None = None,
     ) -> str:
         """Synchronous Gemini API call."""
+        effective_max_tokens = self._get_effective_max_tokens(max_tokens)
+
         response = self.client.models.generate_content(
-            model=self.model,
+            model=model or self.model,
             contents=prompt,
             config=types.GenerateContentConfig(
                 system_instruction=system_prompt,
                 temperature=temperature or self.default_temperature,
-                max_output_tokens=max_tokens or self.default_max_tokens,
+                max_output_tokens=effective_max_tokens,
             ),
         )
+
+        # Check for truncation
+        finish_reason = self._extract_finish_reason(response)
+        if finish_reason == "MAX_TOKENS":
+            self.logger.warning(
+                "Response truncated due to max_tokens limit",
+                agent=self.name,
+                configured_max_tokens=self.default_max_tokens,
+                effective_max_tokens=effective_max_tokens,
+                finish_reason=finish_reason,
+            )
+
         return response.text
 
     def _add_property_ordering(self, schema: dict) -> dict:
@@ -91,6 +106,34 @@ class BaseAgent(ABC):
                             schema["properties"][key] = prop_schema
         return schema
 
+    def _extract_finish_reason(self, response) -> str:
+        """Extract finish_reason from Gemini response.
+
+        Returns:
+            The finish_reason name as string, or "UNKNOWN" if not available.
+        """
+        try:
+            if response.candidates and len(response.candidates) > 0:
+                candidate = response.candidates[0]
+                if hasattr(candidate, "finish_reason") and candidate.finish_reason:
+                    return str(candidate.finish_reason.name)
+        except Exception:
+            pass
+        return "UNKNOWN"
+
+    def _get_effective_max_tokens(self, max_tokens: int | None) -> int | None:
+        """Get effective max_tokens respecting UNLIMITED_TOKENS global switch.
+
+        Args:
+            max_tokens: Explicitly specified max_tokens, or None to use default
+
+        Returns:
+            None if UNLIMITED_TOKENS is True, otherwise the specified or default value.
+        """
+        if UNLIMITED_TOKENS:
+            return None
+        return max_tokens if max_tokens is not None else self.default_max_tokens
+
     def _generate_structured_sync(
         self,
         prompt: str,
@@ -98,22 +141,36 @@ class BaseAgent(ABC):
         response_schema: dict,
         temperature: float | None = None,
         max_tokens: int | None = None,
+        model: str | None = None,
     ) -> str:
         """Synchronous Gemini API call with schema-constrained output."""
         # Add propertyOrdering for Gemini compatibility
         schema_with_ordering = self._add_property_ordering(response_schema)
+        effective_max_tokens = self._get_effective_max_tokens(max_tokens)
 
         response = self.client.models.generate_content(
-            model=self.model,
+            model=model or self.model,
             contents=prompt,
             config={
                 "system_instruction": system_prompt,
                 "temperature": temperature or self.default_temperature,
-                "max_output_tokens": max_tokens or self.default_max_tokens,
+                "max_output_tokens": effective_max_tokens,
                 "response_mime_type": "application/json",
                 "response_json_schema": schema_with_ordering,
             },
         )
+
+        # Check for truncation
+        finish_reason = self._extract_finish_reason(response)
+        if finish_reason == "MAX_TOKENS":
+            self.logger.warning(
+                "Structured response truncated due to max_tokens limit",
+                agent=self.name,
+                configured_max_tokens=self.default_max_tokens,
+                effective_max_tokens=effective_max_tokens,
+                finish_reason=finish_reason,
+            )
+
         return response.text
 
     async def generate(
@@ -122,6 +179,7 @@ class BaseAgent(ABC):
         system_prompt: str | None = None,
         temperature: float | None = None,
         max_tokens: int | None = None,
+        model: str | None = None,
     ) -> str:
         """Async wrapper for Gemini API call."""
         loop = asyncio.get_event_loop()
@@ -133,6 +191,7 @@ class BaseAgent(ABC):
                 system_prompt or self.get_system_prompt(),
                 temperature,
                 max_tokens,
+                model,
             ),
         )
 
@@ -143,6 +202,9 @@ class BaseAgent(ABC):
         system_prompt: str | None = None,
         max_retries: int = 2,
         use_schema_output: bool = True,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+        model: str | None = None,
     ) -> T:
         """Generate and parse structured output into a Pydantic model.
 
@@ -152,6 +214,9 @@ class BaseAgent(ABC):
             system_prompt: Optional system prompt override
             max_retries: Number of retry attempts
             use_schema_output: If True, use Gemini's response_json_schema for guaranteed JSON
+            temperature: Optional temperature override
+            max_tokens: Optional max output tokens override
+            model: Optional model name override
         """
         last_error: Exception | None = None
 
@@ -170,6 +235,9 @@ class BaseAgent(ABC):
                             prompt,
                             system_prompt or self.get_system_prompt(),
                             json_schema,
+                            temperature,
+                            max_tokens,
+                            model,
                         ),
                     )
 

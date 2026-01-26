@@ -6,6 +6,11 @@ Each agent/service has a specific model config with justification.
 
 from enum import Enum
 
+# Global switch to disable all token limits for debugging truncation issues.
+# When True, all agents pass max_output_tokens=None to the Gemini API.
+# Usage: Temporarily set to True when investigating truncated content.
+UNLIMITED_TOKENS = False
+
 
 class GeminiModel(str, Enum):
     """Available Gemini models."""

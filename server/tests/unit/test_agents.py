@@ -374,3 +374,80 @@ class TestValidatorAgent:
             assert len(result.issues) == 1
             assert result.issues[0].severity == "high"
             assert result.overall_score == 65.0
+
+
+class TestBaseAgentFinishReason:
+    """Tests for finish_reason detection in BaseAgent."""
+
+    def test_extract_finish_reason_returns_stop(self, mock_gemini_client):
+        """Test extracting STOP finish_reason."""
+        agent = InterviewerAgent(mock_gemini_client)
+
+        # Mock response with STOP finish_reason
+        mock_response = MagicMock()
+        mock_candidate = MagicMock()
+        mock_candidate.finish_reason.name = "STOP"
+        mock_response.candidates = [mock_candidate]
+
+        result = agent._extract_finish_reason(mock_response)
+        assert result == "STOP"
+
+    def test_extract_finish_reason_returns_max_tokens(self, mock_gemini_client):
+        """Test extracting MAX_TOKENS finish_reason."""
+        agent = InterviewerAgent(mock_gemini_client)
+
+        mock_response = MagicMock()
+        mock_candidate = MagicMock()
+        mock_candidate.finish_reason.name = "MAX_TOKENS"
+        mock_response.candidates = [mock_candidate]
+
+        result = agent._extract_finish_reason(mock_response)
+        assert result == "MAX_TOKENS"
+
+    def test_extract_finish_reason_handles_empty_candidates(self, mock_gemini_client):
+        """Test extracting finish_reason when candidates is empty."""
+        agent = InterviewerAgent(mock_gemini_client)
+
+        mock_response = MagicMock()
+        mock_response.candidates = []
+
+        result = agent._extract_finish_reason(mock_response)
+        assert result == "UNKNOWN"
+
+    def test_extract_finish_reason_handles_none_candidates(self, mock_gemini_client):
+        """Test extracting finish_reason when candidates is None."""
+        agent = InterviewerAgent(mock_gemini_client)
+
+        mock_response = MagicMock()
+        mock_response.candidates = None
+
+        result = agent._extract_finish_reason(mock_response)
+        assert result == "UNKNOWN"
+
+    def test_get_effective_max_tokens_default(self, mock_gemini_client):
+        """Test _get_effective_max_tokens returns default when not unlimited."""
+        agent = InterviewerAgent(mock_gemini_client)
+
+        # When UNLIMITED_TOKENS is False (default), should return default
+        with patch("app.agents.base.UNLIMITED_TOKENS", False):
+            result = agent._get_effective_max_tokens(None)
+            assert result == agent.default_max_tokens
+
+    def test_get_effective_max_tokens_explicit(self, mock_gemini_client):
+        """Test _get_effective_max_tokens respects explicit value."""
+        agent = InterviewerAgent(mock_gemini_client)
+
+        with patch("app.agents.base.UNLIMITED_TOKENS", False):
+            result = agent._get_effective_max_tokens(5000)
+            assert result == 5000
+
+    def test_get_effective_max_tokens_unlimited(self, mock_gemini_client):
+        """Test _get_effective_max_tokens returns None when unlimited."""
+        agent = InterviewerAgent(mock_gemini_client)
+
+        with patch("app.agents.base.UNLIMITED_TOKENS", True):
+            result = agent._get_effective_max_tokens(5000)
+            assert result is None
+
+            result = agent._get_effective_max_tokens(None)
+            assert result is None
