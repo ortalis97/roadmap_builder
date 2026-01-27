@@ -44,17 +44,18 @@ class ResearcherAgent(BaseAgent):
         self,
         outline_item: SessionOutlineItem,
         interview_context: InterviewContext,
-        previous_sessions: list[ResearchedSession],
+        all_session_outlines: list[SessionOutlineItem],
         language: str = "en",
     ) -> ResearchedSession:
         """Create detailed content for a single session."""
-        # Build context from previous sessions
-        prev_context = (
+        # Build context showing all sessions in roadmap for overlap avoidance
+        other_sessions = [s for s in all_session_outlines if s.order != outline_item.order]
+        session_context = (
             "\n".join(
-                [f"- {s.title}: {', '.join(s.key_concepts[:3])}" for s in previous_sessions[-3:]]
+                [f"- Session {s.order}: {s.title} ({s.session_type.value})" for s in other_sessions]
             )
-            if previous_sessions
-            else "None yet"
+            if other_sessions
+            else "This is the only session"
         )
 
         language_instruction = get_language_instruction(language)
@@ -67,8 +68,11 @@ Duration: ~{outline_item.estimated_duration_minutes} minutes
 
 Learning Topic: {interview_context.topic}
 
-Previous sessions covered:
-{prev_context}
+Other sessions in this roadmap:
+{session_context}
+
+IMPORTANT: Focus on YOUR session's specific content. Avoid duplicating material
+that belongs in other sessions - reference them instead if needed.
 
 Create comprehensive, engaging content appropriate for self-directed learning.
 

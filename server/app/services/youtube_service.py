@@ -205,4 +205,3 @@ class YouTubeService:
             None,
             partial(self._get_video_details_sync, video_ids),
         )
-

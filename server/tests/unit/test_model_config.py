@@ -49,34 +49,34 @@ class TestModelConfig:
 class TestAgentModels:
     """Tests for AGENT_MODELS configuration."""
 
-    def test_interviewer_uses_flash_lite(self):
+    def test_interviewer_uses_flash_2_0(self):
         config = AGENT_MODELS["interviewer"]
-        assert config.model == GeminiModel.FLASH_LITE
+        assert config.model == GeminiModel.FLASH_2_0
 
-    def test_architect_uses_flash(self):
+    def test_architect_uses_flash_2_0(self):
         config = AGENT_MODELS["architect"]
-        assert config.model == GeminiModel.FLASH
+        assert config.model == GeminiModel.FLASH_2_0
 
-    def test_researcher_uses_flash(self):
+    def test_researcher_uses_flash_2_0(self):
         config = AGENT_MODELS["researcher"]
-        assert config.model == GeminiModel.FLASH
+        assert config.model == GeminiModel.FLASH_2_0
 
-    def test_validator_uses_flash_lite(self):
+    def test_validator_uses_flash_2_0(self):
         config = AGENT_MODELS["validator"]
-        assert config.model == GeminiModel.FLASH_LITE
+        assert config.model == GeminiModel.FLASH_2_0
 
-    def test_youtube_query_uses_flash_lite(self):
+    def test_youtube_query_uses_flash_2_0(self):
         config = AGENT_MODELS["youtube_query"]
-        assert config.model == GeminiModel.FLASH_LITE
+        assert config.model == GeminiModel.FLASH_2_0
 
     def test_youtube_grounding_uses_flash_2_0(self):
         """Grounding requires 2.0 until 2.5 is verified."""
         config = AGENT_MODELS["youtube_grounding"]
         assert config.model == GeminiModel.FLASH_2_0
 
-    def test_chat_uses_flash(self):
+    def test_chat_uses_flash_2_0(self):
         config = AGENT_MODELS["chat"]
-        assert config.model == GeminiModel.FLASH
+        assert config.model == GeminiModel.FLASH_2_0
 
     def test_all_configs_have_reasons(self):
         """Every config should document why that model was chosen."""
@@ -90,7 +90,7 @@ class TestGetModelConfig:
 
     def test_returns_correct_config(self):
         config = get_model_config("interviewer")
-        assert config.model == GeminiModel.FLASH_LITE
+        assert config.model == GeminiModel.FLASH_2_0
 
     def test_unknown_agent_falls_back_to_researcher(self):
         config = get_model_config("unknown_agent")

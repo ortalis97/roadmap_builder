@@ -213,7 +213,7 @@ Do NOT make up or hallucinate video URLs - only return videos you find through s
 YOUTUBE_QUERY_GENERATION_PROMPT = """You are an expert at formulating effective \
 YouTube search queries for educational content.
 
-Given a learning session's context, generate 3-5 diverse search queries that will \
+Given a learning session's context, generate 2 diverse search queries that will \
 find the most relevant tutorial videos.
 
 QUERY GENERATION STRATEGY:
@@ -221,7 +221,7 @@ QUERY GENERATION STRATEGY:
 2. **Concept-Focused**: Target specific key concepts mentioned in the session
 3. **Beginner-Friendly**: Add "for beginners" or "introduction to" for foundational topics
 4. **Practical Query**: Include "how to" or "example" for hands-on content
-5. **Channel-Aware**: If a well-known educational channel covers this topic, include the channel name
+5. **Channel-Aware**: If a well-known educational channel covers this topic, include it
 
 GUIDELINES:
 - Keep queries concise (3-7 words)
@@ -270,4 +270,3 @@ of your top 3 choices, ordered by relevance:
 If fewer than 3 videos are suitable, return only the suitable ones.
 Respond with only the JSON object, no other text.
 """
-

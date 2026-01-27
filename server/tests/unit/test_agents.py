@@ -256,7 +256,7 @@ class TestResearcherAgent:
             session = await researcher.research_session(
                 outline_item=outline_item,
                 interview_context=context,
-                previous_sessions=[],
+                all_session_outlines=[outline_item],
             )
 
             assert session.title == "Introduction to Python"

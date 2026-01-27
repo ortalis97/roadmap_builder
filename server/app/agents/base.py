@@ -74,6 +74,9 @@ class BaseAgent(ABC):
 
         # Check for truncation
         finish_reason = self._extract_finish_reason(response)
+        response_len = len(response.text) if response.text else 0
+
+        # Log all completions with finish_reason for debugging
         if finish_reason == "MAX_TOKENS":
             self.logger.warning(
                 "Response truncated due to max_tokens limit",
@@ -81,6 +84,23 @@ class BaseAgent(ABC):
                 configured_max_tokens=self.default_max_tokens,
                 effective_max_tokens=effective_max_tokens,
                 finish_reason=finish_reason,
+                response_length=response_len,
+            )
+        elif finish_reason != "STOP":
+            # Log unexpected finish reasons (SAFETY, RECITATION, etc.)
+            self.logger.warning(
+                "Unexpected finish_reason",
+                agent=self.name,
+                finish_reason=finish_reason,
+                response_length=response_len,
+            )
+        else:
+            # Normal completion - log at debug level
+            self.logger.debug(
+                "Generation complete",
+                agent=self.name,
+                finish_reason=finish_reason,
+                response_length=response_len,
             )
 
         return response.text
@@ -162,6 +182,9 @@ class BaseAgent(ABC):
 
         # Check for truncation
         finish_reason = self._extract_finish_reason(response)
+        response_len = len(response.text) if response.text else 0
+
+        # Log all completions with finish_reason for debugging
         if finish_reason == "MAX_TOKENS":
             self.logger.warning(
                 "Structured response truncated due to max_tokens limit",
@@ -169,6 +192,46 @@ class BaseAgent(ABC):
                 configured_max_tokens=self.default_max_tokens,
                 effective_max_tokens=effective_max_tokens,
                 finish_reason=finish_reason,
+                response_length=response_len,
+            )
+        elif finish_reason != "STOP":
+            # Log unexpected finish reasons (SAFETY, RECITATION, etc.)
+            self.logger.warning(
+                "Structured response unexpected finish_reason",
+                agent=self.name,
+                finish_reason=finish_reason,
+                response_length=response_len,
+            )
+        else:
+            # Normal completion - log at info level for structured outputs
+            self.logger.info(
+                "Structured generation complete",
+                agent=self.name,
+                finish_reason=finish_reason,
+                response_length=response_len,
+            )
+
+        # Detect incomplete content (ends mid-sentence despite STOP)
+        if response.text and "researcher" in self.name:
+            text = response.text.strip()
+            # Check if ends mid-sentence (doesn't end with proper punctuation)
+            ends_properly = text.endswith((".", "!", "?", "\n", '"', "'", ")", "]", "}"))
+            if not ends_properly and finish_reason == "STOP":
+                self.logger.error(
+                    "Content appears truncated despite finish_reason=STOP",
+                    agent=self.name,
+                    response_length=response_len,
+                    ends_with=repr(text[-50:]) if len(text) >= 50 else repr(text),
+                )
+
+        # Warn if response is suspiciously short (likely truncated despite STOP)
+        if response_len < 500 and "researcher" in self.name:
+            self.logger.warning(
+                "Suspiciously short response from researcher",
+                agent=self.name,
+                finish_reason=finish_reason,
+                response_length=response_len,
+                threshold=500,
             )
 
         return response.text

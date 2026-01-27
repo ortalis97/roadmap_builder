@@ -37,63 +37,65 @@ class ModelConfig:
 
 
 # Agent/service model assignments with justification
+# NOTE: Currently all using FLASH_2_0 to match original behavior.
+# Other models (FLASH_LITE, FLASH) kept in enum for future experimentation.
 AGENT_MODELS: dict[str, ModelConfig] = {
-    # Pipeline agents
+    # Pipeline agents - all use original base.py defaults (0.7 temp, 8192 tokens)
     "interviewer": ModelConfig(
-        GeminiModel.FLASH_LITE,
+        GeminiModel.FLASH_2_0,
         0.7,
-        3072,
-        "Simple Q&A generation, low complexity",
+        8192,
+        "Simple Q&A generation",
     ),
     "architect": ModelConfig(
-        GeminiModel.FLASH,
+        GeminiModel.FLASH_2_0,
         0.7,
-        6144,
-        "Curriculum design requires logical reasoning",
+        8192,
+        "Curriculum design",
     ),
     "researcher": ModelConfig(
-        GeminiModel.FLASH,
+        GeminiModel.FLASH_2_0,
         0.7,
-        12288,
-        "Educational content quality matters",
+        8192,
+        "Educational content generation",
     ),
     "validator": ModelConfig(
-        GeminiModel.FLASH_LITE,
-        0.3,
-        3072,
-        "Rule-based checking, consistency preferred",
+        GeminiModel.FLASH_2_0,
+        0.7,
+        8192,
+        "Quality validation",
     ),
-    # YouTube agent operations
+    # YouTube agent operations - use original youtube.py defaults (0.3 temp, 4096 tokens)
     "youtube_query": ModelConfig(
-        GeminiModel.FLASH_LITE,
+        GeminiModel.FLASH_2_0,
         0.3,
-        1536,
-        "Simple query generation",
+        4096,
+        "YouTube search query generation",
     ),
     "youtube_rerank": ModelConfig(
-        GeminiModel.FLASH_LITE,
+        GeminiModel.FLASH_2_0,
         0.3,
-        2048,
-        "Video selection task",
+        4096,
+        "Video re-ranking selection",
     ),
     "youtube_grounding": ModelConfig(
         GeminiModel.FLASH_2_0,
         0.3,
-        6144,
-        "Google Search grounding - keep 2.0 until 2.5 verified",
+        4096,
+        "Google Search grounding for video discovery",
     ),
     # Chat service
     "chat": ModelConfig(
-        GeminiModel.FLASH,
+        GeminiModel.FLASH_2_0,
         0.7,
         8192,
-        "User-facing chat, quality matters",
+        "User-facing chat",
     ),
     # Legacy roadmap generation (ai_service.py)
     "roadmap_generation": ModelConfig(
-        GeminiModel.FLASH,
+        GeminiModel.FLASH_2_0,
         0.7,
-        12288,
+        8192,
         "Legacy roadmap generation endpoint",
     ),
 }

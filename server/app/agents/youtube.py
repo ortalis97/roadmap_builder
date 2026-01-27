@@ -31,9 +31,7 @@ class YouTubeSearchResponse(BaseModel):
 class QueryGenerationResponse(BaseModel):
     """Response schema for query generation."""
 
-    queries: list[str] = Field(
-        description="List of 3-5 diverse YouTube search queries"
-    )
+    queries: list[str] = Field(description="List of 3-5 diverse YouTube search queries")
 
 
 class SelectedVideo(BaseModel):
@@ -173,7 +171,7 @@ KEY CONCEPTS: {key_concepts_str}
 SESSION CONTENT (first 300 chars):
 {session.content[:300]}...
 
-Generate 3-5 diverse search queries to find the best tutorial videos."""
+Generate 2 diverse search queries to find the best tutorial videos."""
 
         try:
             config = self._query_config
@@ -185,7 +183,7 @@ Generate 3-5 diverse search queries to find the best tutorial videos."""
                 temperature=config.temperature,
                 max_tokens=config.max_tokens,
             )
-            return response.queries[:5]
+            return response.queries[:2]
 
         except Exception as e:
             self.logger.warning(
@@ -224,53 +222,42 @@ Generate 3-5 diverse search queries to find the best tutorial videos."""
                 if isinstance(result, QuotaExhaustedError) or "quota" in str(result).lower():
                     raise QuotaExhaustedError("YouTube API quota exhausted")
                 if isinstance(result, ValueError):
-                     raise result
+                    raise result
                 self.logger.warning("Search query failed", error=str(result))
                 continue
             for item in result:
                 video_id = item.get("id", {}).get("videoId")
                 if video_id and video_id not in seen_ids:
                     seen_ids.add(video_id)
-                    raw_candidates.append({
-                        "video_id": video_id,
-                        "snippet": item.get("snippet", {}),
-                    })
+                    raw_candidates.append(
+                        {
+                            "video_id": video_id,
+                            "snippet": item.get("snippet", {}),
+                        }
+                    )
 
         if not raw_candidates:
             return []
 
-        # Fetch detailed metadata for all candidates
-        video_ids = [c["video_id"] for c in raw_candidates]
-        try:
-            details = await self.youtube_service.get_video_details(video_ids)
-        except QuotaExhaustedError:
-            raise
-        except Exception as e:
-            self.logger.warning("Failed to fetch video details", error=str(e))
-            details = {}
-
-        # Combine search results with details
+        # Build candidates directly from search results (skip video details API to save quota)
         candidates = []
         for raw in raw_candidates:
             video_id = raw["video_id"]
             snippet = raw["snippet"]
-            detail = details.get(video_id, {})
 
-            # Parse ISO 8601 duration to minutes
-            duration_iso = detail.get("duration_iso", "")
-            duration_minutes = self._parse_iso_duration(duration_iso)
-
-            candidates.append({
-                "video_id": video_id,
-                "url": f"https://www.youtube.com/watch?v={video_id}",
-                "title": detail.get("title") or snippet.get("title", ""),
-                "channel": detail.get("channel") or snippet.get("channelTitle", ""),
-                "description": (detail.get("description") or snippet.get("description", ""))[:300],
-                "thumbnail_url": detail.get("thumbnail_url") or snippet.get("thumbnails", {}).get("high", {}).get("url", ""),
-                "view_count": detail.get("view_count", 0),
-                "published_at": detail.get("published_at", ""),
-                "duration_minutes": duration_minutes,
-            })
+            candidates.append(
+                {
+                    "video_id": video_id,
+                    "url": f"https://www.youtube.com/watch?v={video_id}",
+                    "title": snippet.get("title", ""),
+                    "channel": snippet.get("channelTitle", ""),
+                    "description": snippet.get("description", "")[:300],
+                    "thumbnail_url": snippet.get("thumbnails", {}).get("high", {}).get("url", ""),
+                    "view_count": 0,  # Not available from search, skip details API
+                    "published_at": snippet.get("publishedAt", ""),
+                    "duration_minutes": None,  # Not available from search, skip details API
+                }
+            )
 
         return candidates
 
@@ -312,12 +299,13 @@ Generate 3-5 diverse search queries to find the best tutorial videos."""
 
         # Format candidates for the prompt
         key_concepts_str = ", ".join(session.key_concepts[:5]) if session.key_concepts else ""
-        candidates_text = "\n".join([
-            f"[{i}] \"{c['title']}\" by {c['channel']} "
-            f"({c['view_count']:,} views, {c['duration_minutes'] or '?'} min)\n"
-            f"    Description: {c['description'][:150]}..."
-            for i, c in enumerate(candidates)
-        ])
+        candidates_text = "\n".join(
+            [
+                f'[{i}] "{c["title"]}" by {c["channel"]}\n'
+                f"    Description: {c['description'][:150]}..."
+                for i, c in enumerate(candidates)
+            ]
+        )
 
         prompt = f"""Select the {max_videos} best videos for this learning session:
 
@@ -347,14 +335,16 @@ Select the videos that will best help a learner understand the key concepts."""
                 idx = item.index
                 if 0 <= idx < len(candidates):
                     c = candidates[idx]
-                    result.append(VideoResource(
-                        url=c["url"],
-                        title=c["title"],
-                        channel=c["channel"],
-                        thumbnail_url=c["thumbnail_url"],
-                        duration_minutes=c["duration_minutes"],
-                        description=c["description"],
-                    ))
+                    result.append(
+                        VideoResource(
+                            url=c["url"],
+                            title=c["title"],
+                            channel=c["channel"],
+                            thumbnail_url=c["thumbnail_url"],
+                            duration_minutes=c["duration_minutes"],
+                            description=c["description"],
+                        )
+                    )
 
             if result:
                 return result

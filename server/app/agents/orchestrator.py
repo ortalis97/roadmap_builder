@@ -299,7 +299,7 @@ class PipelineOrchestrator:
 
         async def research_session(
             outline_item: Any,
-            previous: list[ResearchedSession],
+            all_outlines: list[Any],
         ) -> tuple[ResearchedSession, AgentSpan]:
             researcher = get_researcher_for_type(outline_item.session_type, self.client)
             span = researcher.create_span(f"research_{outline_item.session_type.value}")
@@ -308,7 +308,7 @@ class PipelineOrchestrator:
                 session = await researcher.research_session(
                     outline_item=outline_item,
                     interview_context=interview_context,
-                    previous_sessions=previous,
+                    all_session_outlines=all_outlines,
                     language=self.state.language,
                 )
                 researcher.complete_span(
@@ -322,8 +322,10 @@ class PipelineOrchestrator:
                 researcher.complete_span(span, error=e)
                 raise
 
-        # Run all researchers in parallel using asyncio.gather
-        tasks = [research_session(outline_item, []) for outline_item in outline.sessions]
+        # Run all researchers in parallel with full outline context
+        tasks = [
+            research_session(outline_item, outline.sessions) for outline_item in outline.sessions
+        ]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         for result in results:
@@ -334,7 +336,7 @@ class PipelineOrchestrator:
             researched_sessions.append(session)
             spans.append(span)
 
-        # Sort by order
+        # Sort by order (parallel doesn't guarantee order)
         researched_sessions.sort(key=lambda s: s.order)
 
         # Add all spans to trace
