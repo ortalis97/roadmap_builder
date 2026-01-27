@@ -451,3 +451,95 @@ class TestBaseAgentFinishReason:
 
             result = agent._get_effective_max_tokens(None)
             assert result is None
+
+
+class TestContentSanitization:
+    """Tests for content sanitization in researcher output."""
+
+    @pytest.mark.asyncio
+    async def test_sanitize_content_replaces_br_tags(self, mock_gemini_client):
+        """Test that {br} tags are replaced with newlines."""
+        from app.agents.researcher import _sanitize_content
+
+        # Test basic replacement
+        content = "Line 1{br}Line 2{br}Line 3"
+        result = _sanitize_content(content)
+        assert result == "Line 1\nLine 2\nLine 3"
+
+    @pytest.mark.asyncio
+    async def test_sanitize_content_preserves_normal_content(self, mock_gemini_client):
+        """Test that normal content without {br} is unchanged."""
+        from app.agents.researcher import _sanitize_content
+
+        content = "# Heading\n\nNormal paragraph with no special tags."
+        result = _sanitize_content(content)
+        assert result == content
+
+    @pytest.mark.asyncio
+    async def test_research_session_sanitizes_content(self, mock_gemini_client):
+        """Test that research_session applies content sanitization."""
+        mock_response = MagicMock()
+        mock_response.content = "# Introduction{br}{br}Paragraph with{br}line breaks"
+        mock_response.key_concepts = ["test"]
+        mock_response.resources = []
+        mock_response.exercises = []
+
+        researcher = ConceptResearcher(mock_gemini_client)
+
+        with patch.object(
+            researcher, "generate_structured", new_callable=AsyncMock
+        ) as mock_generate:
+            mock_generate.return_value = mock_response
+
+            outline_item = SessionOutlineItem(
+                id="session_001",
+                title="Test Session",
+                objective="Test objective",
+                session_type=SessionType.CONCEPT,
+                estimated_duration_minutes=60,
+                prerequisites=[],
+                order=1,
+            )
+
+            context = InterviewContext(topic="Test topic")
+
+            session = await researcher.research_session(
+                outline_item=outline_item,
+                interview_context=context,
+                all_session_outlines=[outline_item],
+            )
+
+            # Verify {br} tags are replaced with newlines
+            assert "{br}" not in session.content
+            assert "# Introduction\n\nParagraph with\nline breaks" == session.content
+
+
+class TestContentTruncatedError:
+    """Tests for ContentTruncatedError behavior."""
+
+    def test_content_truncated_error_exists(self):
+        """Test that ContentTruncatedError is importable."""
+        from app.agents.base import ContentTruncatedError
+
+        error = ContentTruncatedError("Test message")
+        assert str(error) == "Test message"
+
+    def test_content_truncated_error_is_exception(self):
+        """Test that ContentTruncatedError is a proper exception."""
+        from app.agents.base import ContentTruncatedError
+
+        with pytest.raises(ContentTruncatedError):
+            raise ContentTruncatedError("Content was truncated")
+
+    def test_generate_structured_catches_truncation_error(self, mock_gemini_client):
+        """Test that generate_structured catches ContentTruncatedError in retry loop."""
+        from app.agents.base import ContentTruncatedError
+
+        # The error should be caught and retried like other parse errors
+        researcher = ConceptResearcher(mock_gemini_client)
+
+        # Verify the error is in the exception tuple
+        # This is a structural test - the actual retry behavior is tested via integration
+        import inspect
+        source = inspect.getsource(researcher.generate_structured)
+        assert "ContentTruncatedError" in source

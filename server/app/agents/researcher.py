@@ -30,6 +30,15 @@ class ResearchResponse(BaseModel):
     exercises: list[str] = Field(default_factory=list)
 
 
+def _sanitize_content(content: str) -> str:
+    """Sanitize researcher output content.
+
+    Fixes known Gemini formatting issues:
+    - Replace literal {br} tags with newlines
+    """
+    return content.replace("{br}", "\n")
+
+
 class ResearcherAgent(BaseAgent):
     """Base researcher agent - subclass for specialized session types."""
 
@@ -75,6 +84,7 @@ IMPORTANT: Focus on YOUR session's specific content. Avoid duplicating material
 that belongs in other sessions - reference them instead if needed.
 
 Create comprehensive, engaging content appropriate for self-directed learning.
+DO NOT use custom formatting like {{br}}. Use standard Markdown for all formatting.
 
 Output JSON:
 {{
@@ -94,7 +104,7 @@ Output JSON:
             title=outline_item.title,
             session_type=outline_item.session_type,
             order=outline_item.order,
-            content=response.content,
+            content=_sanitize_content(response.content),
             key_concepts=response.key_concepts,
             resources=response.resources,
             exercises=response.exercises,

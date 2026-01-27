@@ -30,6 +30,13 @@ logger = structlog.get_logger()
 
 T = TypeVar("T", bound=BaseModel)
 
+
+class ContentTruncatedError(Exception):
+    """Raised when content appears truncated despite finish_reason=STOP."""
+
+    pass
+
+
 # Network errors that should trigger automatic retry with backoff
 RETRYABLE_NETWORK_ERRORS = (
     HttpcoreRemoteProtocolError,
@@ -263,63 +270,87 @@ class BaseAgent(ABC):
                 },
             )
 
-        # Execute with network retry
-        response = self._call_with_network_retry(make_api_call, "generate_structured")
+        # Truncation retry loop (max 1 retry on detected truncation)
+        max_truncation_retries = 1
+        for truncation_attempt in range(max_truncation_retries + 1):
+            # Execute with network retry
+            response = self._call_with_network_retry(make_api_call, "generate_structured")
 
-        # Check for truncation
-        finish_reason = self._extract_finish_reason(response)
-        response_len = len(response.text) if response.text else 0
+            # Check for truncation
+            finish_reason = self._extract_finish_reason(response)
+            response_len = len(response.text) if response.text else 0
 
-        # Log all completions with finish_reason for debugging
-        if finish_reason == "MAX_TOKENS":
-            self.logger.warning(
-                "Structured response truncated due to max_tokens limit",
-                agent=self.name,
-                configured_max_tokens=self.default_max_tokens,
-                effective_max_tokens=effective_max_tokens,
-                finish_reason=finish_reason,
-                response_length=response_len,
-            )
-        elif finish_reason != "STOP":
-            # Log unexpected finish reasons (SAFETY, RECITATION, etc.)
-            self.logger.warning(
-                "Structured response unexpected finish_reason",
-                agent=self.name,
-                finish_reason=finish_reason,
-                response_length=response_len,
-            )
-        else:
-            # Normal completion - log at info level for structured outputs
-            self.logger.info(
-                "Structured generation complete",
-                agent=self.name,
-                finish_reason=finish_reason,
-                response_length=response_len,
-            )
-
-        # Detect incomplete content (ends mid-sentence despite STOP)
-        if response.text and "researcher" in self.name:
-            text = response.text.strip()
-            # Check if ends mid-sentence (doesn't end with proper punctuation)
-            ends_properly = text.endswith((".", "!", "?", "\n", '"', "'", ")", "]", "}"))
-            if not ends_properly and finish_reason == "STOP":
-                self.logger.error(
-                    "Content appears truncated despite finish_reason=STOP",
+            # Log all completions with finish_reason for debugging
+            if finish_reason == "MAX_TOKENS":
+                self.logger.warning(
+                    "Structured response truncated due to max_tokens limit",
                     agent=self.name,
+                    configured_max_tokens=self.default_max_tokens,
+                    effective_max_tokens=effective_max_tokens,
+                    finish_reason=finish_reason,
                     response_length=response_len,
-                    ends_with=repr(text[-50:]) if len(text) >= 50 else repr(text),
+                )
+            elif finish_reason != "STOP":
+                # Log unexpected finish reasons (SAFETY, RECITATION, etc.)
+                self.logger.warning(
+                    "Structured response unexpected finish_reason",
+                    agent=self.name,
+                    finish_reason=finish_reason,
+                    response_length=response_len,
+                )
+            else:
+                # Normal completion - log at info level for structured outputs
+                self.logger.info(
+                    "Structured generation complete",
+                    agent=self.name,
+                    finish_reason=finish_reason,
+                    response_length=response_len,
                 )
 
-        # Warn if response is suspiciously short (likely truncated despite STOP)
-        if response_len < 500 and "researcher" in self.name:
-            self.logger.warning(
-                "Suspiciously short response from researcher",
-                agent=self.name,
-                finish_reason=finish_reason,
-                response_length=response_len,
-                threshold=500,
-            )
+            # Detect incomplete content (ends mid-sentence despite STOP)
+            if response.text and "researcher" in self.name:
+                text = response.text.strip()
+                # Check if ends mid-sentence (doesn't end with proper punctuation)
+                ends_properly = text.endswith((".", "!", "?", "\n", '"', "'", ")", "]", "}"))
+                if not ends_properly and finish_reason == "STOP":
+                    ends_with = repr(text[-50:]) if len(text) >= 50 else repr(text)
 
+                    if truncation_attempt < max_truncation_retries:
+                        self.logger.warning(
+                            "Content appears truncated, retrying",
+                            agent=self.name,
+                            attempt=truncation_attempt + 1,
+                            max_attempts=max_truncation_retries + 1,
+                            response_length=response_len,
+                            ends_with=ends_with,
+                        )
+                        continue  # Retry
+                    else:
+                        self.logger.error(
+                            "Content truncated despite retry - raising error",
+                            agent=self.name,
+                            response_length=response_len,
+                            ends_with=ends_with,
+                        )
+                        raise ContentTruncatedError(
+                            f"Content truncated mid-sentence after "
+                            f"{max_truncation_retries + 1} attempts: ends with {ends_with}"
+                        )
+
+            # Warn if response is suspiciously short (likely truncated despite STOP)
+            if response_len < 500 and "researcher" in self.name:
+                self.logger.warning(
+                    "Suspiciously short response from researcher",
+                    agent=self.name,
+                    finish_reason=finish_reason,
+                    response_length=response_len,
+                    threshold=500,
+                )
+
+            # Success - return the response
+            return response.text
+
+        # Should not reach here, but return last response if loop exits normally
         return response.text
 
     async def generate(
@@ -412,7 +443,7 @@ class BaseAgent(ABC):
                     data = json.loads(cleaned)
                     return response_model.model_validate(data)
 
-            except (json.JSONDecodeError, ValueError) as e:
+            except (json.JSONDecodeError, ValueError, ContentTruncatedError) as e:
                 last_error = e
                 self.logger.warning(
                     "Failed to parse response",
