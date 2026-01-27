@@ -24,6 +24,7 @@ from app.agents.state import (
 )
 from app.agents.validator import ValidatorAgent
 from app.agents.youtube import YouTubeAgent
+from app.model_config import MAX_CONCURRENT_API_CALLS
 from app.models.agent_trace import AgentSpan, AgentTrace
 from app.models.roadmap import Roadmap, SessionSummary
 from app.models.session import Session
@@ -31,6 +32,20 @@ from app.services.sse_service import SSEEvent
 from app.utils.language import detect_language
 
 logger = structlog.get_logger()
+
+# Semaphore to limit concurrent Gemini API calls
+_api_semaphore: asyncio.Semaphore | None = None
+
+
+def get_api_semaphore() -> asyncio.Semaphore:
+    """Get or create the API concurrency semaphore.
+
+    Created lazily to ensure it's created in the right event loop.
+    """
+    global _api_semaphore
+    if _api_semaphore is None:
+        _api_semaphore = asyncio.Semaphore(MAX_CONCURRENT_API_CALLS)
+    return _api_semaphore
 
 
 class PipelineOrchestrator:
@@ -292,10 +307,16 @@ class PipelineOrchestrator:
         outline: SessionOutline,
         interview_context: InterviewContext,
     ) -> list[ResearchedSession]:
-        """Run researchers in parallel for all sessions."""
+        """Run researchers in parallel for all sessions with concurrency limiting."""
         self.state.stage = PipelineStage.RESEARCHING
         researched_sessions: list[ResearchedSession] = []
         spans: list[AgentSpan] = []
+
+        self.logger.info(
+            "Starting parallel research",
+            total_sessions=len(outline.sessions),
+            max_concurrent=MAX_CONCURRENT_API_CALLS,
+        )
 
         async def research_session(
             outline_item: Any,
@@ -304,13 +325,31 @@ class PipelineOrchestrator:
             researcher = get_researcher_for_type(outline_item.session_type, self.client)
             span = researcher.create_span(f"research_{outline_item.session_type.value}")
 
+            semaphore = get_api_semaphore()
+
             try:
-                session = await researcher.research_session(
-                    outline_item=outline_item,
-                    interview_context=interview_context,
-                    all_session_outlines=all_outlines,
-                    language=self.state.language,
-                )
+                # Log if we need to wait for semaphore
+                if semaphore.locked():
+                    self.logger.debug(
+                        "Waiting for API slot",
+                        session_order=outline_item.order,
+                        session_title=outline_item.title[:50],
+                    )
+
+                async with semaphore:
+                    self.logger.debug(
+                        "Acquired API slot, starting research",
+                        session_order=outline_item.order,
+                        session_title=outline_item.title[:50],
+                    )
+
+                    session = await researcher.research_session(
+                        outline_item=outline_item,
+                        interview_context=interview_context,
+                        all_session_outlines=all_outlines,
+                        language=self.state.language,
+                    )
+
                 researcher.complete_span(
                     span,
                     status="success",
@@ -330,7 +369,11 @@ class PipelineOrchestrator:
 
         for result in results:
             if isinstance(result, Exception):
-                self.logger.error("Research failed", error=str(result))
+                self.logger.error(
+                    "Research failed",
+                    error=str(result),
+                    error_type=type(result).__name__,
+                )
                 raise result
             session, span = result
             researched_sessions.append(session)
@@ -359,13 +402,36 @@ class PipelineOrchestrator:
         youtube_agent = YouTubeAgent(self.client)
         spans: list[AgentSpan] = []
 
+        self.logger.info(
+            "Starting parallel video search",
+            total_sessions=len(researched_sessions),
+            max_concurrent=MAX_CONCURRENT_API_CALLS,
+        )
+
         async def find_videos_for_session(session: ResearchedSession) -> None:
             """Find videos for a single session."""
             span = youtube_agent.create_span(f"find_videos_{session.order}")
 
+            semaphore = get_api_semaphore()
+
             try:
-                videos = await youtube_agent.find_videos(session, max_videos=3)
-                session.videos = videos
+                # Log if we need to wait for semaphore
+                if semaphore.locked():
+                    self.logger.debug(
+                        "Waiting for API slot (videos)",
+                        session_order=session.order,
+                        session_title=session.title[:50],
+                    )
+
+                async with semaphore:
+                    self.logger.debug(
+                        "Acquired API slot, starting video search",
+                        session_order=session.order,
+                        session_title=session.title[:50],
+                    )
+
+                    videos = await youtube_agent.find_videos(session, max_videos=3)
+                    session.videos = videos
 
                 youtube_agent.complete_span(
                     span,

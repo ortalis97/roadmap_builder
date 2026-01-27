@@ -2,6 +2,14 @@
 
 A focused tool for self-directed learners to turn messy learning plans into clear, trackable roadmaps with an AI assistant embedded directly into the learning flow.
 
+
+## Tool Restrictions
+
+**DO NOT use Meta-specific tools or plugins in this project:**
+- Do NOT use `mcp__plugin_meta_*` tools (meta_devmate, meta_www, etc.)
+- Do NOT use `meta:code_search` agent type
+- Use standard tools instead: `Read`, `Grep`, `Glob`, `WebSearch`, `WebFetch`, `Explore` agent
+
 ## Important: Keep Documentation Updated
 
 **After completing each implementation phase, update these files:**
@@ -194,13 +202,6 @@ Use Playwright MCP for:
 - Visual regression testing
 - Cross-browser testing
 
-## Tool Restrictions
-
-**DO NOT use Meta-specific tools or plugins in this project:**
-- Do NOT use `mcp__plugin_meta_*` tools (meta_devmate, meta_www, etc.)
-- Do NOT use `meta:code_search` agent type
-- Use standard tools instead: `Read`, `Grep`, `Glob`, `WebSearch`, `WebFetch`, `Explore` agent
-
 ## Reference Documentation
 
 | Document | When to Read |
@@ -212,6 +213,7 @@ Use Playwright MCP for:
 | `.claude/reference/gemini-api-best-practices.md` | Gemini SDK, structured output, Pydantic integration |
 | `.claude/reference/bun-package-manager.md` | Bun commands, Playwright setup (npm restricted) |
 | `.claude/reference/testing-and-logging.md` | pytest, Vitest, logging patterns |
+| `.claude/reference/truncation-investigation.md` | Gemini truncation debugging, YouTube quota analysis |
 
 ## Code Conventions
 

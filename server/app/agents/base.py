@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import time
 import uuid
 from abc import ABC, abstractmethod
 from datetime import UTC, datetime
@@ -11,14 +12,34 @@ from typing import TypeVar
 import structlog
 from google import genai
 from google.genai import types
+from httpcore import RemoteProtocolError as HttpcoreRemoteProtocolError
+from httpx import ConnectError, ReadTimeout
+from httpx import RemoteProtocolError as HttpxRemoteProtocolError
 from pydantic import BaseModel
 
-from app.model_config import UNLIMITED_TOKENS, get_model_config
+from app.model_config import (
+    NETWORK_RETRY_ATTEMPTS,
+    NETWORK_RETRY_BASE_DELAY,
+    NETWORK_RETRY_MAX_DELAY,
+    UNLIMITED_TOKENS,
+    get_model_config,
+)
 from app.models.agent_trace import AgentSpan
 
 logger = structlog.get_logger()
 
 T = TypeVar("T", bound=BaseModel)
+
+# Network errors that should trigger automatic retry with backoff
+RETRYABLE_NETWORK_ERRORS = (
+    HttpcoreRemoteProtocolError,
+    HttpxRemoteProtocolError,
+    ConnectError,
+    ReadTimeout,
+    ConnectionError,
+    TimeoutError,
+    OSError,  # Catches various socket errors
+)
 
 
 class BaseAgent(ABC):
@@ -59,18 +80,22 @@ class BaseAgent(ABC):
         max_tokens: int | None = None,
         model: str | None = None,
     ) -> str:
-        """Synchronous Gemini API call."""
+        """Synchronous Gemini API call with network retry."""
         effective_max_tokens = self._get_effective_max_tokens(max_tokens)
 
-        response = self.client.models.generate_content(
-            model=model or self.model,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                system_instruction=system_prompt,
-                temperature=temperature or self.default_temperature,
-                max_output_tokens=effective_max_tokens,
-            ),
-        )
+        def make_api_call():
+            return self.client.models.generate_content(
+                model=model or self.model,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    temperature=temperature or self.default_temperature,
+                    max_output_tokens=effective_max_tokens,
+                ),
+            )
+
+        # Execute with network retry
+        response = self._call_with_network_retry(make_api_call, "generate")
 
         # Check for truncation
         finish_reason = self._extract_finish_reason(response)
@@ -154,6 +179,63 @@ class BaseAgent(ABC):
             return None
         return max_tokens if max_tokens is not None else self.default_max_tokens
 
+    def _call_with_network_retry(
+        self,
+        api_call_func,
+        operation_name: str,
+    ):
+        """Execute an API call with network error retry and exponential backoff.
+
+        Args:
+            api_call_func: Callable that makes the API request and returns response
+            operation_name: Name of the operation for logging
+
+        Returns:
+            The API response object
+
+        Raises:
+            The last network error if all retries are exhausted
+        """
+        last_error: Exception | None = None
+
+        for attempt in range(NETWORK_RETRY_ATTEMPTS + 1):
+            try:
+                return api_call_func()
+            except RETRYABLE_NETWORK_ERRORS as e:
+                last_error = e
+
+                if attempt < NETWORK_RETRY_ATTEMPTS:
+                    # Calculate exponential backoff delay
+                    delay = min(
+                        NETWORK_RETRY_BASE_DELAY * (2**attempt),
+                        NETWORK_RETRY_MAX_DELAY,
+                    )
+
+                    self.logger.warning(
+                        "Network error, retrying with backoff",
+                        agent=self.name,
+                        operation=operation_name,
+                        attempt=attempt + 1,
+                        max_attempts=NETWORK_RETRY_ATTEMPTS + 1,
+                        error_type=type(e).__name__,
+                        error_message=str(e)[:200],
+                        retry_delay_seconds=delay,
+                    )
+
+                    time.sleep(delay)
+                else:
+                    self.logger.error(
+                        "Network error, all retries exhausted",
+                        agent=self.name,
+                        operation=operation_name,
+                        total_attempts=NETWORK_RETRY_ATTEMPTS + 1,
+                        error_type=type(e).__name__,
+                        error_message=str(e)[:500],
+                    )
+
+        # Re-raise the last error
+        raise last_error
+
     def _generate_structured_sync(
         self,
         prompt: str,
@@ -163,22 +245,26 @@ class BaseAgent(ABC):
         max_tokens: int | None = None,
         model: str | None = None,
     ) -> str:
-        """Synchronous Gemini API call with schema-constrained output."""
+        """Synchronous Gemini API call with schema-constrained output and network retry."""
         # Add propertyOrdering for Gemini compatibility
         schema_with_ordering = self._add_property_ordering(response_schema)
         effective_max_tokens = self._get_effective_max_tokens(max_tokens)
 
-        response = self.client.models.generate_content(
-            model=model or self.model,
-            contents=prompt,
-            config={
-                "system_instruction": system_prompt,
-                "temperature": temperature or self.default_temperature,
-                "max_output_tokens": effective_max_tokens,
-                "response_mime_type": "application/json",
-                "response_json_schema": schema_with_ordering,
-            },
-        )
+        def make_api_call():
+            return self.client.models.generate_content(
+                model=model or self.model,
+                contents=prompt,
+                config={
+                    "system_instruction": system_prompt,
+                    "temperature": temperature or self.default_temperature,
+                    "max_output_tokens": effective_max_tokens,
+                    "response_mime_type": "application/json",
+                    "response_json_schema": schema_with_ordering,
+                },
+            )
+
+        # Execute with network retry
+        response = self._call_with_network_retry(make_api_call, "generate_structured")
 
         # Check for truncation
         finish_reason = self._extract_finish_reason(response)

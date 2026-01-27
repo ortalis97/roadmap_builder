@@ -11,6 +11,15 @@ from enum import Enum
 # Usage: Temporarily set to True when investigating truncated content.
 UNLIMITED_TOKENS = False
 
+# Concurrency and retry configuration for Gemini API calls.
+# Prevents connection drops from too many parallel requests.
+MAX_CONCURRENT_API_CALLS = 5  # Max parallel Gemini API requests
+
+# Network error retry settings with exponential backoff.
+NETWORK_RETRY_ATTEMPTS = 3  # Number of retry attempts for network errors
+NETWORK_RETRY_BASE_DELAY = 1.0  # Initial delay in seconds (doubles each retry)
+NETWORK_RETRY_MAX_DELAY = 30.0  # Maximum delay between retries
+
 
 class GeminiModel(str, Enum):
     """Available Gemini models."""
@@ -42,51 +51,51 @@ class ModelConfig:
 AGENT_MODELS: dict[str, ModelConfig] = {
     # Pipeline agents - all use original base.py defaults (0.7 temp, 8192 tokens)
     "interviewer": ModelConfig(
-        GeminiModel.FLASH_2_0,
+        GeminiModel.FLASH,
         0.7,
         8192,
         "Simple Q&A generation",
     ),
     "architect": ModelConfig(
-        GeminiModel.FLASH_2_0,
+        GeminiModel.FLASH,
         0.7,
         8192,
         "Curriculum design",
     ),
     "researcher": ModelConfig(
-        GeminiModel.FLASH_2_0,
+        GeminiModel.FLASH,
         0.7,
-        8192,
+        12288,
         "Educational content generation",
     ),
     "validator": ModelConfig(
         GeminiModel.FLASH_2_0,
         0.7,
-        8192,
+        12288,
         "Quality validation",
     ),
     # YouTube agent operations - use original youtube.py defaults (0.3 temp, 4096 tokens)
     "youtube_query": ModelConfig(
-        GeminiModel.FLASH_2_0,
+        GeminiModel.FLASH_LITE,
         0.3,
         4096,
         "YouTube search query generation",
     ),
     "youtube_rerank": ModelConfig(
-        GeminiModel.FLASH_2_0,
+        GeminiModel.FLASH_LITE,
         0.3,
         4096,
         "Video re-ranking selection",
     ),
     "youtube_grounding": ModelConfig(
-        GeminiModel.FLASH_2_0,
+        GeminiModel.FLASH_LITE,
         0.3,
         4096,
         "Google Search grounding for video discovery",
     ),
     # Chat service
     "chat": ModelConfig(
-        GeminiModel.FLASH_2_0,
+        GeminiModel.FLASH_LITE,
         0.7,
         8192,
         "User-facing chat",
