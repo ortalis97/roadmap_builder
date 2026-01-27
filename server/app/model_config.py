@@ -63,7 +63,7 @@ AGENT_MODELS: dict[str, ModelConfig] = {
         "Curriculum design",
     ),
     "researcher": ModelConfig(
-        GeminiModel.FLASH,
+        GeminiModel.FLASH_2_0,
         0.7,
         12288,
         "Educational content generation",
