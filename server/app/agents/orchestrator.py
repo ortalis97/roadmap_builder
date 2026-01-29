@@ -175,6 +175,16 @@ class PipelineOrchestrator:
                 data={"suggested_title": suggested_title},
             )
 
+            # Emit architect completion with session count
+            yield SSEEvent(
+                event="stage_complete",
+                data={
+                    "stage": "architecting",
+                    "summary": f"Designed {len(outline.sessions)} sessions",
+                    "session_count": len(outline.sessions),
+                },
+            )
+
             # Run researchers in parallel
             yield SSEEvent(
                 event="stage_update",
@@ -196,6 +206,15 @@ class PipelineOrchestrator:
                     },
                 )
 
+            # Emit research completion
+            yield SSEEvent(
+                event="stage_complete",
+                data={
+                    "stage": "researching",
+                    "summary": f"Researched {len(researched_sessions)} sessions",
+                },
+            )
+
             # Run YouTube agent to find videos
             yield SSEEvent(
                 event="stage_update",
@@ -205,6 +224,16 @@ class PipelineOrchestrator:
                 },
             )
             await self._run_youtube_agent(researched_sessions)
+
+            # Emit video search completion
+            videos_found = sum(len(s.videos) for s in researched_sessions)
+            yield SSEEvent(
+                event="stage_complete",
+                data={
+                    "stage": "finding_videos",
+                    "summary": f"Found {videos_found} videos",
+                },
+            )
 
             # Run validator
             yield SSEEvent(
@@ -268,6 +297,15 @@ class PipelineOrchestrator:
 
             # Store final validation result for debugging
             self.state.validation_result = validation_result
+
+            # Emit validation completion
+            yield SSEEvent(
+                event="stage_complete",
+                data={
+                    "stage": "validating",
+                    "summary": f"Quality score: {validation_result.overall_score:.0f}/100",
+                },
+            )
 
             # Proceed directly to save (no user review)
             yield SSEEvent(

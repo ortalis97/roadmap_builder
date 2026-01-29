@@ -162,6 +162,7 @@ export interface CreationProgress {
   current_session?: number;
   total_sessions?: number;
   session_title?: string;
+  completed_stages?: CompletedStage[];
 }
 
 export interface SSEStageUpdateData {
@@ -186,4 +187,15 @@ export interface SSEErrorData {
 
 export interface SSETitleSuggestionData {
   suggested_title: string;
+}
+
+export interface SSEStageCompleteData {
+  stage: string;
+  summary: string;
+  session_count?: number;
+}
+
+export interface CompletedStage {
+  stage: CreationStage;
+  summary: string;
 }

@@ -16,6 +16,8 @@ import type {
   SSECompleteData,
   SSEErrorData,
   SSETitleSuggestionData,
+  SSEStageCompleteData,
+  CompletedStage,
 } from '../types';
 
 export interface CreationState {
@@ -29,6 +31,7 @@ export interface CreationState {
   validationResult: ValidationResult | null;
   roadmapId: string | null;
   error: string | null;
+  completedStages: CompletedStage[];
 }
 
 const initialState: CreationState = {
@@ -42,6 +45,7 @@ const initialState: CreationState = {
   validationResult: null,
   roadmapId: null,
   error: null,
+  completedStages: [],
 };
 
 export function useRoadmapCreation() {
@@ -83,6 +87,21 @@ export function useRoadmapCreation() {
         updateState({
           suggestedTitle: data.suggested_title,
         });
+        break;
+      }
+      case 'stage_complete': {
+        const data = event.data as SSEStageCompleteData;
+        setState(prev => ({
+          ...prev,
+          completedStages: [
+            ...prev.completedStages,
+            { stage: data.stage as CreationStage, summary: data.summary }
+          ],
+          progress: {
+            ...prev.progress,
+            total_sessions: data.session_count ?? prev.progress.total_sessions,
+          },
+        }));
         break;
       }
       case 'complete': {
