@@ -57,9 +57,9 @@ class TestAgentModels:
         config = AGENT_MODELS["architect"]
         assert config.model == GeminiModel.FLASH
 
-    def test_researcher_uses_flash(self):
+    def test_researcher_uses_flash_2_0(self):
         config = AGENT_MODELS["researcher"]
-        assert config.model == GeminiModel.FLASH
+        assert config.model == GeminiModel.FLASH_2_0
 
     def test_validator_uses_flash_2_0(self):
         config = AGENT_MODELS["validator"]
@@ -76,6 +76,18 @@ class TestAgentModels:
 
     def test_chat_uses_flash_lite(self):
         config = AGENT_MODELS["chat"]
+        assert config.model == GeminiModel.FLASH_LITE
+
+    def test_editor_uses_flash(self):
+        """Editor uses standard FLASH for surgical content editing."""
+        config = AGENT_MODELS["editor"]
+        assert config.model == GeminiModel.FLASH
+        # Editor should have lower temperature for consistent edits
+        assert config.temperature == 0.5
+
+    def test_editor_research_uses_flash_lite(self):
+        """Editor research uses FLASH_LITE for gap-filling."""
+        config = AGENT_MODELS["editor_research"]
         assert config.model == GeminiModel.FLASH_LITE
 
     def test_all_configs_have_reasons(self):

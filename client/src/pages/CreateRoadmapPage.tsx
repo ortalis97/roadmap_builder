@@ -3,15 +3,13 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useRoadmapCreation } from '../hooks/useRoadmapCreation';
 import { InterviewQuestions } from '../components/creation/InterviewQuestions';
 import { CreationProgressDisplay } from '../components/creation/CreationProgress';
-import { ValidationReview } from '../components/creation/ValidationReview';
-import { TitleConfirmation } from '../components/creation/TitleConfirmation';
 import { useIsMobile } from '../hooks/useMediaQuery';
 
 export function CreateRoadmapPage() {
   const [topic, setTopic] = useState('');
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const { state, start, submitAnswers, submitReview, setConfirmedTitle, reset } = useRoadmapCreation();
+  const { state, start, submitAnswers, reset } = useRoadmapCreation();
 
   // Navigate to roadmap on completion
   useEffect(() => {
@@ -36,19 +34,6 @@ export function CreateRoadmapPage() {
       return;
     }
     start(topic.trim());
-  };
-
-  const handleTitleConfirm = (title: string) => {
-    setConfirmedTitle(title);
-    submitReview(true);
-  };
-
-  const handleAcceptValidation = () => {
-    submitReview(true);
-  };
-
-  const handleFixIssues = (issueIds: string[]) => {
-    submitReview(false, issueIds);
   };
 
   // Show interview questions
@@ -80,27 +65,6 @@ export function CreateRoadmapPage() {
     return (
       <div className="max-w-3xl mx-auto py-6">
         <CreationProgressDisplay progress={state.progress} />
-      </div>
-    );
-  }
-
-  // Show validation review with title confirmation
-  if (state.stage === 'user_review' && state.validationResult) {
-    return (
-      <div className="max-w-3xl mx-auto py-6 space-y-6">
-        {state.suggestedTitle && (
-          <TitleConfirmation
-            suggestedTitle={state.suggestedTitle}
-            onConfirm={handleTitleConfirm}
-            isSubmitting={false}
-          />
-        )}
-        <ValidationReview
-          validationResult={state.validationResult}
-          onAccept={handleAcceptValidation}
-          onFixIssues={handleFixIssues}
-          isSubmitting={false}
-        />
       </div>
     );
   }

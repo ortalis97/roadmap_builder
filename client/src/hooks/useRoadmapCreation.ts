@@ -85,15 +85,6 @@ export function useRoadmapCreation() {
         });
         break;
       }
-      case 'validation_result': {
-        const data = event.data as ValidationResult;
-        updateState({
-          stage: 'user_review',
-          progress: { stage: 'user_review', message: 'Review required' },
-          validationResult: data,
-        });
-        break;
-      }
       case 'complete': {
         const data = event.data as SSECompleteData;
         updateState({

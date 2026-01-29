@@ -149,6 +149,14 @@ class ValidationResult(BaseModel):
     summary: str  # Brief assessment
 
 
+class EditorDecision(BaseModel):
+    """Editor's decision for how to handle an issue."""
+
+    edited_content: str  # Full edited session content
+    needs_research: bool = False  # True if critical gap needs research
+    research_request: str | None = None  # What to research if needs_research
+
+
 # ============= Pipeline State =============
 
 
@@ -198,6 +206,10 @@ class PipelineState(BaseModel):
     # Validation phase
     validation_result: ValidationResult | None = None
     user_selected_issues: list[str] = Field(default_factory=list)  # Issue IDs to fix
+
+    # Fix attempt tracking
+    fix_attempt: int = 0  # Current fix attempt (0 = initial, 1 = first fix, 2 = second fix)
+    fix_history: list[dict] = Field(default_factory=list)  # Log of fix attempts for debugging
 
     # Final output
     roadmap_id: str | None = None  # Created roadmap ID

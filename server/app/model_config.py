@@ -74,6 +74,19 @@ AGENT_MODELS: dict[str, ModelConfig] = {
         12288,
         "Quality validation",
     ),
+    # Editor agent for surgical content fixes
+    "editor": ModelConfig(
+        GeminiModel.FLASH,
+        0.5,  # Lower temperature for more consistent edits
+        12288,
+        "Surgical content editing",
+    ),
+    "editor_research": ModelConfig(
+        GeminiModel.FLASH_LITE,
+        0.7,
+        4096,  # Smaller output for targeted sections
+        "Gap-filling research sections",
+    ),
     # YouTube agent operations - use original youtube.py defaults (0.3 temp, 4096 tokens)
     "youtube_query": ModelConfig(
         GeminiModel.FLASH_LITE,

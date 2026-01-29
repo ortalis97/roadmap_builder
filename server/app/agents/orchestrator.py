@@ -10,6 +10,7 @@ from beanie import PydanticObjectId
 from google import genai
 
 from app.agents.architect import ArchitectAgent
+from app.agents.editor import EditorAgent
 from app.agents.interviewer import InterviewerAgent
 from app.agents.researcher import get_researcher_for_type
 from app.agents.state import (
@@ -20,6 +21,7 @@ from app.agents.state import (
     PipelineState,
     ResearchedSession,
     SessionOutline,
+    ValidationIssue,
     ValidationResult,
 )
 from app.agents.validator import ValidatorAgent
@@ -211,42 +213,81 @@ class PipelineOrchestrator:
             )
             validation_result = await self._run_validator(outline, researched_sessions)
 
-            # Check if user review needed
-            if not validation_result.is_valid:
-                self.state.stage = PipelineStage.USER_REVIEW
-                self.state.validation_result = validation_result
+            # Auto-fix loop: up to 2 attempts if validation fails
+            max_fix_attempts = 2
+            while not validation_result.is_valid and self.state.fix_attempt < max_fix_attempts:
+                self.logger.info(
+                    "Validation failed, attempting edit fix",
+                    attempt=self.state.fix_attempt + 1,
+                    max_attempts=max_fix_attempts,
+                    issues=len(validation_result.issues),
+                    score=validation_result.overall_score,
+                )
+
                 yield SSEEvent(
-                    event="validation_result",
+                    event="stage_update",
                     data={
-                        "is_valid": validation_result.is_valid,
-                        "issues": [
-                            {
-                                "id": issue.id,
-                                "issue_type": issue.issue_type.value,
-                                "severity": issue.severity,
-                                "description": issue.description,
-                                "suggested_fix": issue.suggested_fix,
-                            }
-                            for issue in validation_result.issues
-                        ],
-                        "score": validation_result.overall_score,
-                        "summary": validation_result.summary,
+                        "stage": "validating",
+                        "message": (
+                            f"Improving content quality "
+                            f"(attempt {self.state.fix_attempt + 1}/{max_fix_attempts})..."
+                        ),
                     },
                 )
-                return  # Wait for user review decision
 
-            # No issues - proceed to title confirmation
-            self.state.stage = PipelineStage.USER_REVIEW
+                # Run Editor agent to fix issues
+                researched_sessions = await self._run_editor(
+                    validation_result,
+                    outline,
+                    researched_sessions,
+                    interview_context,
+                )
+                self.state.researched_sessions = researched_sessions
+
+                # Re-validate
+                yield SSEEvent(
+                    event="stage_update",
+                    data={"stage": "validating", "message": "Re-validating..."},
+                )
+                validation_result = await self._run_validator(outline, researched_sessions)
+
+            # Log final validation state
+            if validation_result.is_valid:
+                self.logger.info(
+                    "Validation passed",
+                    attempts=self.state.fix_attempt,
+                    final_score=validation_result.overall_score,
+                )
+            else:
+                self.logger.warning(
+                    "Validation still has issues after max edit attempts, proceeding anyway",
+                    attempts=self.state.fix_attempt,
+                    remaining_issues=len(validation_result.issues),
+                    final_score=validation_result.overall_score,
+                )
+
+            # Store final validation result for debugging
+            self.state.validation_result = validation_result
+
+            # Proceed directly to save (no user review)
             yield SSEEvent(
-                event="validation_result",
+                event="stage_update",
+                data={"stage": "saving", "message": "Saving your roadmap..."},
+            )
+
+            roadmap = await self._save_roadmap(outline, researched_sessions)
+
+            self.state.stage = PipelineStage.COMPLETE
+            self.trace.final_status = "success"
+            await self.trace.save()
+
+            yield SSEEvent(
+                event="complete",
                 data={
-                    "is_valid": True,
-                    "issues": [],
-                    "score": validation_result.overall_score,
-                    "summary": validation_result.summary,
+                    "roadmap_id": str(roadmap.id),
+                    "message": "Roadmap created successfully!",
                 },
             )
-            # Wait for user to confirm title before saving
 
         except Exception as e:
             self.state.stage = PipelineStage.ERROR
@@ -499,6 +540,154 @@ class PipelineOrchestrator:
             await self.trace.save()
             raise
 
+    async def _run_editor(
+        self,
+        validation_result: ValidationResult,
+        outline: SessionOutline,
+        researched_sessions: list[ResearchedSession],
+        interview_context: InterviewContext,
+    ) -> list[ResearchedSession]:
+        """Run Editor agent to fix validation issues surgically.
+
+        Args:
+            validation_result: The validation result with issues
+            outline: Session outline for context
+            researched_sessions: Current sessions (some will be edited)
+            interview_context: Interview context for research if needed
+
+        Returns:
+            Updated list of researched sessions with edited sessions
+        """
+        self.state.fix_attempt += 1
+        self.state.stage = PipelineStage.REVISING
+
+        # Group issues by session
+        issues_by_session: dict[str, list[ValidationIssue]] = {}
+        for issue in validation_result.issues:
+            for session_id in issue.affected_session_ids:
+                if session_id not in issues_by_session:
+                    issues_by_session[session_id] = []
+                issues_by_session[session_id].append(issue)
+
+        self.logger.info(
+            "Starting edit attempt",
+            attempt=self.state.fix_attempt,
+            sessions_to_edit=len(issues_by_session),
+            total_issues=len(validation_result.issues),
+        )
+
+        # Log fix attempt to history
+        self.state.fix_history.append(
+            {
+                "attempt": self.state.fix_attempt,
+                "issues_count": len(validation_result.issues),
+                "affected_sessions": list(issues_by_session.keys()),
+                "issues": [
+                    {
+                        "type": i.issue_type.value,
+                        "severity": i.severity,
+                        "description": i.description,
+                    }
+                    for i in validation_result.issues
+                ],
+            }
+        )
+
+        # Map outline items and sessions by ID for quick lookup
+        outline_by_id = {item.id: item for item in outline.sessions}
+        sessions_by_id = {s.outline_id: s for s in researched_sessions}
+
+        editor = EditorAgent(self.client)
+        spans: list[AgentSpan] = []
+
+        # Edit each affected session
+        async def edit_session(
+            session_id: str,
+        ) -> tuple[str, ResearchedSession | None, AgentSpan | None]:
+            session = sessions_by_id.get(session_id)
+            outline_item = outline_by_id.get(session_id)
+            issues = issues_by_session.get(session_id, [])
+
+            if not session or not outline_item:
+                self.logger.warning(
+                    "Session or outline not found for editing",
+                    session_id=session_id,
+                )
+                return session_id, session, None
+
+            span = editor.create_span(f"edit_{session.order}")
+
+            semaphore = get_api_semaphore()
+
+            try:
+                async with semaphore:
+                    self.logger.debug(
+                        "Editing session",
+                        session_order=session.order,
+                        session_title=session.title[:50],
+                        issues_count=len(issues),
+                    )
+
+                    edited_session = await editor.edit_session(
+                        session=session,
+                        issues=issues,
+                        outline_item=outline_item,
+                        interview_context=interview_context,
+                        all_session_outlines=outline.sessions,
+                        language=self.state.language,
+                    )
+
+                editor.complete_span(
+                    span,
+                    status="success",
+                    output_summary=f"Edited: {edited_session.title}",
+                )
+                return session_id, edited_session, span
+
+            except Exception as e:
+                editor.complete_span(span, error=e)
+                raise
+
+        # Edit all affected sessions in parallel
+        tasks = [edit_session(session_id) for session_id in issues_by_session.keys()]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Build updated session list
+        edited_sessions_map: dict[str, ResearchedSession] = {}
+
+        for result in results:
+            if isinstance(result, Exception):
+                self.logger.error("Edit failed", error=str(result))
+                raise result
+            session_id, edited_session, span = result
+            if edited_session:
+                edited_sessions_map[session_id] = edited_session
+            if span:
+                spans.append(span)
+
+        # Replace edited sessions in the list
+        updated_sessions = []
+        for session in researched_sessions:
+            if session.outline_id in edited_sessions_map:
+                updated_sessions.append(edited_sessions_map[session.outline_id])
+            else:
+                updated_sessions.append(session)
+
+        # Sort by order
+        updated_sessions.sort(key=lambda s: s.order)
+
+        # Add spans to trace
+        self.trace.spans.extend(spans)
+        await self.trace.save()
+
+        self.logger.info(
+            "Edit attempt complete",
+            attempt=self.state.fix_attempt,
+            sessions_edited=len(edited_sessions_map),
+        )
+
+        return updated_sessions
+
     async def _save_roadmap(
         self,
         outline: SessionOutline,
@@ -561,71 +750,44 @@ class PipelineOrchestrator:
         issues_to_fix: list[str] | None = None,
         confirmed_title: str | None = None,
     ) -> AsyncGenerator[SSEEvent, None]:
-        """Continue pipeline after user review.
+        """Continue pipeline after user review (DEPRECATED).
 
-        Args:
-            accept_as_is: Whether to accept the roadmap as-is
-            issues_to_fix: List of issue IDs to fix (not yet implemented)
-            confirmed_title: User-confirmed title for the roadmap
+        Validation/fixing is now automatic. This method just saves the roadmap.
+        Kept for backwards compatibility with existing frontend.
         """
+        self.logger.warning(
+            "proceed_after_review called - deprecated, validation is now automatic",
+            pipeline_id=self.pipeline_id,
+        )
+
         if not self.state or not self.trace:
             raise ValueError("Pipeline not initialized")
 
-        if self.state.stage != PipelineStage.USER_REVIEW:
-            raise ValueError("Pipeline not in user review stage")
-
-        # Store confirmed title if provided
         if confirmed_title:
             self.state.confirmed_title = confirmed_title
 
         try:
-            if accept_as_is or not issues_to_fix:
-                # User accepted, proceed to save
-                yield SSEEvent(
-                    event="stage_update",
-                    data={"stage": "saving", "message": "Saving your roadmap..."},
-                )
+            yield SSEEvent(
+                event="stage_update",
+                data={"stage": "saving", "message": "Saving your roadmap..."},
+            )
 
-                roadmap = await self._save_roadmap(
-                    self.state.session_outline,
-                    self.state.researched_sessions,
-                )
+            roadmap = await self._save_roadmap(
+                self.state.session_outline,
+                self.state.researched_sessions,
+            )
 
-                self.state.stage = PipelineStage.COMPLETE
-                self.trace.final_status = "success"
-                await self.trace.save()
+            self.state.stage = PipelineStage.COMPLETE
+            self.trace.final_status = "success"
+            await self.trace.save()
 
-                yield SSEEvent(
-                    event="complete",
-                    data={
-                        "roadmap_id": str(roadmap.id),
-                        "message": "Roadmap created successfully!",
-                    },
-                )
-            else:
-                # Future: handle revision of specific issues
-                # For now, just save anyway
-                yield SSEEvent(
-                    event="stage_update",
-                    data={"stage": "saving", "message": "Saving your roadmap..."},
-                )
-
-                roadmap = await self._save_roadmap(
-                    self.state.session_outline,
-                    self.state.researched_sessions,
-                )
-
-                self.state.stage = PipelineStage.COMPLETE
-                self.trace.final_status = "success"
-                await self.trace.save()
-
-                yield SSEEvent(
-                    event="complete",
-                    data={
-                        "roadmap_id": str(roadmap.id),
-                        "message": "Roadmap created successfully!",
-                    },
-                )
+            yield SSEEvent(
+                event="complete",
+                data={
+                    "roadmap_id": str(roadmap.id),
+                    "message": "Roadmap created successfully!",
+                },
+            )
 
         except Exception as e:
             self.state.stage = PipelineStage.ERROR
@@ -633,7 +795,7 @@ class PipelineOrchestrator:
             self.trace.final_status = "error"
             await self.trace.save()
 
-            self.logger.exception("Pipeline failed after review", error=str(e))
+            self.logger.exception("Pipeline failed", error=str(e))
             yield SSEEvent(
                 event="error",
                 data={"message": str(e)},
