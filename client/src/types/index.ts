@@ -159,9 +159,8 @@ export type CreationStage =
 export interface CreationProgress {
   stage: CreationStage;
   message: string;
-  current_session?: number;
+  completed_sessions?: number;  // Number of sessions completed (parallel, not sequential)
   total_sessions?: number;
-  session_title?: string;
   completed_stages?: CompletedStage[];
 }
 
@@ -171,9 +170,8 @@ export interface SSEStageUpdateData {
 }
 
 export interface SSESessionProgressData {
-  current: number;
+  completed: number;  // Number of sessions completed (parallel, not sequential)
   total: number;
-  session_title: string;
 }
 
 export interface SSECompleteData {

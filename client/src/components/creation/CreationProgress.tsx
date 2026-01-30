@@ -19,35 +19,46 @@ const PIPELINE_STAGES: { stage: CreationStage; label: string; pendingLabel: stri
   { stage: 'saving', label: 'Saving', pendingLabel: 'Save roadmap' },
 ];
 
+// Stage weights based on actual time spent (total = 100%)
+const STAGE_WEIGHTS: Record<string, { start: number; weight: number }> = {
+  architecting:   { start: 0,   weight: 10 },  // 0-10%
+  researching:    { start: 10,  weight: 50 },  // 10-60%
+  finding_videos: { start: 60,  weight: 20 },  // 60-80%
+  validating:     { start: 80,  weight: 15 },  // 80-95%
+  saving:         { start: 95,  weight: 5 },   // 95-100%
+};
+
 function getStageIndex(stage: CreationStage): number {
   return PIPELINE_STAGES.findIndex(s => s.stage === stage);
 }
 
-function calculateProgress(currentStage: CreationStage, currentSession?: number, totalSessions?: number): number {
-  const stageIndex = getStageIndex(currentStage);
-  if (stageIndex === -1) return 0;
-
-  // Each stage is worth 20% (5 stages total)
-  const baseProgress = stageIndex * 20;
-
-  // For researching stage, add granular progress based on session
-  if (currentStage === 'researching' && currentSession && totalSessions) {
-    const sessionProgress = (currentSession / totalSessions) * 20;
-    return Math.round(baseProgress + sessionProgress);
-  }
-
-  // For completed stages, add the full 20%
+function calculateProgress(
+  currentStage: CreationStage,
+  completedSessions?: number,
+  totalSessions?: number
+): number {
   if (currentStage === 'complete') return 100;
 
-  // For in-progress stages, show partial progress (10% into the stage)
-  return Math.round(baseProgress + 10);
+  const stageConfig = STAGE_WEIGHTS[currentStage];
+  if (!stageConfig) return 0;
+
+  const { start, weight } = stageConfig;
+
+  // For researching, interpolate based on completed sessions
+  if (currentStage === 'researching' && completedSessions !== undefined && totalSessions && totalSessions > 0) {
+    const sessionProgress = (completedSessions / totalSessions) * weight;
+    return Math.round(start + sessionProgress);
+  }
+
+  // For other in-progress stages, show start of that stage
+  return start;
 }
 
 export function CreationProgressDisplay({ progress, completedStages = [] }: CreationProgressProps) {
   const currentStageIndex = getStageIndex(progress.stage);
   const progressPercent = calculateProgress(
     progress.stage,
-    progress.current_session,
+    progress.completed_sessions,
     progress.total_sessions
   );
 
@@ -116,8 +127,8 @@ export function CreationProgressDisplay({ progress, completedStages = [] }: Crea
                   )}
                   {isCurrent && (
                     <p className="text-blue-700 font-medium">
-                      {progress.stage === 'researching' && progress.current_session && progress.total_sessions
-                        ? `Researching session ${progress.current_session} of ${progress.total_sessions}${progress.session_title ? `: "${progress.session_title}"` : ''}`
+                      {progress.stage === 'researching' && progress.completed_sessions !== undefined && progress.total_sessions
+                        ? `Researching sessions... (${progress.completed_sessions} of ${progress.total_sessions} complete)`
                         : progress.message}
                     </p>
                   )}

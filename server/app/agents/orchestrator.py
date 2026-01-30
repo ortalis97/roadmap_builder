@@ -185,7 +185,7 @@ class PipelineOrchestrator:
                 },
             )
 
-            # Run researchers in parallel
+            # Run researchers in parallel with real-time progress
             yield SSEEvent(
                 event="stage_update",
                 data={
@@ -193,18 +193,13 @@ class PipelineOrchestrator:
                     "message": f"Researching {len(outline.sessions)} sessions...",
                 },
             )
-            researched_sessions = await self._run_researchers_parallel(outline, interview_context)
 
-            # Yield progress for each session
-            for i, session in enumerate(researched_sessions, 1):
-                yield SSEEvent(
-                    event="session_progress",
-                    data={
-                        "current": i,
-                        "total": len(researched_sessions),
-                        "session_title": session.title,
-                    },
-                )
+            # Iterate over research generator, yielding progress events as each completes
+            async for event in self._run_researchers_parallel(outline, interview_context):
+                yield event
+
+            # Get the researched sessions from state (set by the generator)
+            researched_sessions = self.state.researched_sessions
 
             # Emit research completion
             yield SSEEvent(
@@ -385,15 +380,21 @@ class PipelineOrchestrator:
         self,
         outline: SessionOutline,
         interview_context: InterviewContext,
-    ) -> list[ResearchedSession]:
-        """Run researchers in parallel for all sessions with concurrency limiting."""
+    ) -> AsyncGenerator[SSEEvent, None]:
+        """Run researchers in parallel, yielding progress events as each completes.
+
+        Yields SSEEvent for each session that completes. The researched sessions
+        are stored in self.state.researched_sessions when complete.
+        """
         self.state.stage = PipelineStage.RESEARCHING
+        total_sessions = len(outline.sessions)
+        completed_count = 0
         researched_sessions: list[ResearchedSession] = []
         spans: list[AgentSpan] = []
 
         self.logger.info(
             "Starting parallel research",
-            total_sessions=len(outline.sessions),
+            total_sessions=total_sessions,
             max_concurrent=MAX_CONCURRENT_API_CALLS,
         )
 
@@ -440,25 +441,37 @@ class PipelineOrchestrator:
                 researcher.complete_span(span, error=e)
                 raise
 
-        # Run all researchers in parallel with full outline context
+        # Create tasks
         tasks = [
-            research_session(outline_item, outline.sessions) for outline_item in outline.sessions
+            asyncio.create_task(research_session(outline_item, outline.sessions))
+            for outline_item in outline.sessions
         ]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        for result in results:
-            if isinstance(result, Exception):
+        # Process as they complete and yield progress events
+        for coro in asyncio.as_completed(tasks):
+            try:
+                session, span = await coro
+                researched_sessions.append(session)
+                spans.append(span)
+                completed_count += 1
+
+                # Yield progress event
+                yield SSEEvent(
+                    event="session_progress",
+                    data={
+                        "completed": completed_count,
+                        "total": total_sessions,
+                    },
+                )
+            except Exception as e:
                 self.logger.error(
                     "Research failed",
-                    error=str(result),
-                    error_type=type(result).__name__,
+                    error=str(e),
+                    error_type=type(e).__name__,
                 )
-                raise result
-            session, span = result
-            researched_sessions.append(session)
-            spans.append(span)
+                raise
 
-        # Sort by order (parallel doesn't guarantee order)
+        # Sort by order (as_completed doesn't preserve order)
         researched_sessions.sort(key=lambda s: s.order)
 
         # Add all spans to trace
@@ -467,7 +480,6 @@ class PipelineOrchestrator:
 
         self.state.researched_sessions = researched_sessions
         self.logger.info("All sessions researched", count=len(researched_sessions))
-        return researched_sessions
 
     async def _run_youtube_agent(
         self,

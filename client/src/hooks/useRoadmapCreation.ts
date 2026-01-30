@@ -74,10 +74,9 @@ export function useRoadmapCreation() {
         updateState({
           progress: {
             stage: 'researching',
-            message: `Researching: ${data.session_title}`,
-            current_session: data.current,
+            message: `Researching sessions... (${data.completed} of ${data.total} complete)`,
+            completed_sessions: data.completed,
             total_sessions: data.total,
-            session_title: data.session_title,
           },
         });
         break;
