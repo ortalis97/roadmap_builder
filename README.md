@@ -82,7 +82,6 @@ See [PRD.md](PRD.md) for the complete product vision, user stories, and detailed
 ### Known Bugs
 
 - **Roadmap `69790f196f068b99f344c516`** — Sessions 2 (`69790f196f068b99f344c518`) and 4 (`69790f196f068b99f344c51a`) are truncated mid-sentence despite finish_reason=STOP.
-- **"Fix Roadmap" post-validation doesn't work** — After validator identifies issues, clicking "Fix Roadmap" does not trigger corrections. The fix pipeline is not implemented.
 
 ## Tech Stack
 

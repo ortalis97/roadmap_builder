@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useRoadmaps } from '../hooks/useRoadmaps';
 import { useRoadmapProgress } from '../hooks/useSessions';
@@ -32,6 +33,12 @@ function RoadmapCard({ roadmap }: { roadmap: RoadmapListItem }) {
 
 export function DashboardPage() {
   const { data: roadmaps, isLoading, error } = useRoadmaps();
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Filter roadmaps by search query
+  const filteredRoadmaps = roadmaps?.filter(r =>
+    r.title.toLowerCase().includes(searchQuery.toLowerCase())
+  ) ?? [];
 
   if (isLoading) {
     return (
@@ -75,11 +82,43 @@ export function DashboardPage() {
           </Link>
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {roadmaps?.map((roadmap) => (
-            <RoadmapCard key={roadmap.id} roadmap={roadmap} />
-          ))}
-        </div>
+        <>
+          {roadmaps && roadmaps.length >= 3 && (
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search roadmaps..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  aria-label="Clear search"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          )}
+
+          {filteredRoadmaps.length === 0 && searchQuery ? (
+            <div className="text-center py-12 bg-white rounded-lg shadow">
+              <h3 className="text-lg font-medium text-gray-900">No roadmaps match your search</h3>
+              <p className="mt-2 text-gray-500">
+                Try a different search term.
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {filteredRoadmaps.map((roadmap) => (
+                <RoadmapCard key={roadmap.id} roadmap={roadmap} />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

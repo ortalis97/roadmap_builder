@@ -36,6 +36,7 @@ class Roadmap(Document):
     sessions: list[SessionSummary] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(default_factory=utc_now)
+    last_visited_at: datetime | None = None  # Optional for existing docs
 
     class Settings:
         name = "roadmaps"
@@ -43,4 +44,9 @@ class Roadmap(Document):
     async def update_timestamp(self) -> None:
         """Update the updated_at timestamp."""
         self.updated_at = utc_now()
+        await self.save()
+
+    async def update_last_visited(self) -> None:
+        """Update the last_visited_at timestamp."""
+        self.last_visited_at = utc_now()
         await self.save()

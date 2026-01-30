@@ -33,6 +33,7 @@ class RoadmapListItem(BaseModel):
     session_count: int
     language: str = "en"
     created_at: datetime
+    last_visited_at: datetime
 
     class Config:
         from_attributes = True
@@ -118,9 +119,15 @@ async def list_roadmaps(
 ) -> list[RoadmapListItem]:
     """List all roadmaps for the current user.
 
-    Returns a simplified view with session counts.
+    Returns a simplified view with session counts, sorted by last visited.
     """
     roadmaps = await Roadmap.find(Roadmap.user_id == current_user.id).to_list()
+
+    # Sort by last_visited_at descending, fallback to updated_at for existing docs
+    roadmaps.sort(
+        key=lambda r: r.last_visited_at or r.updated_at,
+        reverse=True,
+    )
 
     return [
         RoadmapListItem(
@@ -129,6 +136,7 @@ async def list_roadmaps(
             session_count=len(roadmap.sessions),
             language=roadmap.language,
             created_at=roadmap.created_at,
+            last_visited_at=roadmap.last_visited_at or roadmap.updated_at,
         )
         for roadmap in roadmaps
     ]
@@ -165,6 +173,9 @@ async def get_roadmap(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Roadmap not found",
         )
+
+    # Update last visited timestamp
+    await roadmap.update_last_visited()
 
     return RoadmapResponse(
         id=str(roadmap.id),
@@ -283,6 +294,9 @@ async def get_session(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Session not found",
         )
+
+    # Update parent roadmap's last visited timestamp
+    await roadmap.update_last_visited()
 
     return SessionResponse(
         id=str(session.id),

@@ -57,6 +57,7 @@ export interface RoadmapListItem {
   session_count: number;
   language: Language;
   created_at: string;
+  last_visited_at: string;
 }
 
 export interface Roadmap {

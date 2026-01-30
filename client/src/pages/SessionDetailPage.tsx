@@ -6,7 +6,7 @@ import { NotesEditor } from '../components/NotesEditor';
 import { MarkdownContent } from '../components/MarkdownContent';
 import { VideoSection } from '../components/VideoSection';
 import type { SessionStatus } from '../types';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { getLanguageDirection } from '../utils/language';
 
 export function SessionDetailPage() {
@@ -45,6 +45,25 @@ export function SessionDetailPage() {
   const handleNotesSave = useCallback((notes: string) => {
     updateSession({ notes });
   }, [updateSession]);
+
+  // Auto-set to "in_progress" when entering a "not_started" session
+  useEffect(() => {
+    if (session && session.status === 'not_started' && !isPending) {
+      updateSession({ status: 'in_progress' });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.id]); // Only run when session ID changes
+
+  // Mark current session as done and navigate to next session
+  const handleNextSession = () => {
+    if (nextSession) {
+      // Mark current session as done if it's in_progress
+      if (session && session.status === 'in_progress') {
+        updateSession({ status: 'done' });
+      }
+      navigate(`/roadmaps/${roadmapId}/sessions/${nextSession.id}`);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -152,7 +171,7 @@ export function SessionDetailPage() {
 
         {nextSession ? (
           <button
-            onClick={() => navigate(`/roadmaps/${roadmapId}/sessions/${nextSession.id}`)}
+            onClick={handleNextSession}
             className="flex items-center gap-2 px-4 py-3 md:py-2 min-h-[44px] md:min-h-0 text-gray-700 hover:bg-gray-100 rounded-md"
           >
             <span className="text-sm md:text-sm">{nextSession.title}</span>
